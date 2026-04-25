@@ -6,7 +6,8 @@
   "version": "1.0.0",
   "tab": {
     "path": "/activity",
-    "position": "after:analytics"
+    "position": "after:analytics",
+    "hidden": true
   },
   "slots": ["header-banner"],
   "entry": "dist/index.js",

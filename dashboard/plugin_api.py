@@ -1,9 +1,11 @@
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 from datetime import datetime, timedelta, date
 from collections import defaultdict
-from typing import Literal
 import statistics
 import time
+import io
+import csv
 
 router = APIRouter()
 
@@ -15,14 +17,14 @@ _CACHE: dict[tuple, tuple[float, list]] = {}
 _TTL_SECONDS = 30
 
 
-def cached_cells(start: date, end: date) -> list[dict]:
-    key = (start.isoformat(), end.isoformat())
+def cached_cells(start: date, end: date, source: str | None = None) -> list[dict]:
+    key = (start.isoformat(), end.isoformat(), source or "")
     now = time.time()
     if key in _CACHE:
         cached_at, value = _CACHE[key]
         if now - cached_at < _TTL_SECONDS:
             return value
-    value = compute_cells(start, end)
+    value = compute_cells(start, end, source=source)
     _CACHE[key] = (now, value)
     return value
 
@@ -31,12 +33,11 @@ def cached_cells(start: date, end: date) -> list[dict]:
 # Core aggregation
 # ---------------------------------------------------------------------------
 
-def compute_cells(start: date, end: date) -> list[dict]:
+def compute_cells(start: date, end: date, source: str | None = None) -> list[dict]:
     """Walk every session in [start, end] and aggregate by day."""
     try:
         from hermes_state import SessionDB
     except ImportError:
-        # Return empty cells if hermes_state not available
         cells = []
         cur = start
         while cur <= end:
@@ -57,11 +58,12 @@ def compute_cells(start: date, end: date) -> list[dict]:
         })
 
         for s in sessions:
+            if source and s.get("source") != source:
+                continue
             ts_raw = s.get("started_at")
             if ts_raw is None:
                 continue
             try:
-                # started_at is stored as a Unix REAL (seconds since epoch)
                 ts = datetime.fromtimestamp(float(ts_raw))
                 d = ts.date()
             except (ValueError, OSError, OverflowError):
@@ -78,7 +80,6 @@ def compute_cells(start: date, end: date) -> list[dict]:
             cell["tool_calls"] += s.get("tool_call_count", 0) or 0
             cell["cost"] += s.get("estimated_cost_usd", 0.0) or 0.0
 
-        # Fill gaps with zero cells
         cells = []
         cur = start
         while cur <= end:
@@ -89,6 +90,46 @@ def compute_cells(start: date, end: date) -> list[dict]:
             cells.append({"date": cur.isoformat(), **entry})
             cur += timedelta(days=1)
         return cells
+    finally:
+        db.close()
+
+
+def compute_hour_cells(d: date, source: str | None = None) -> list[dict]:
+    """Aggregate sessions for a single day into 24 hourly cells."""
+    try:
+        from hermes_state import SessionDB
+    except ImportError:
+        return [{"hour": h, "value": 0, "sessions": 0} for h in range(24)]
+
+    db = SessionDB()
+    try:
+        sessions = db.search_sessions(limit=99999)
+        hours = defaultdict(lambda: {"sessions": 0, "tokens": 0, "input_tokens": 0, "output_tokens": 0, "tool_calls": 0, "cost": 0.0})
+
+        for s in sessions:
+            if source and s.get("source") != source:
+                continue
+            ts_raw = s.get("started_at")
+            if ts_raw is None:
+                continue
+            try:
+                ts = datetime.fromtimestamp(float(ts_raw))
+            except (ValueError, OSError, OverflowError):
+                continue
+            if ts.date() != d:
+                continue
+            h = ts.hour
+            hc = hours[h]
+            hc["sessions"] += 1
+            input_t = s.get("input_tokens", 0) or 0
+            output_t = s.get("output_tokens", 0) or 0
+            hc["tokens"] += input_t + output_t
+            hc["input_tokens"] += input_t
+            hc["output_tokens"] += output_t
+            hc["tool_calls"] += s.get("tool_call_count", 0) or 0
+            hc["cost"] += s.get("estimated_cost_usd", 0.0) or 0.0
+
+        return [{"hour": h, "value": hours[h]["sessions"], **hours[h]} for h in range(24)]
     finally:
         db.close()
 
@@ -109,16 +150,14 @@ def quantile_buckets(values: list[float]) -> list[float]:
 # Streak helpers
 # ---------------------------------------------------------------------------
 
-def compute_streaks() -> dict:
+def compute_streaks(source: str | None = None) -> dict:
     today = datetime.utcnow().date()
-    start = today - timedelta(days=730)  # 2-year lookback for best-ever
-    cells = cached_cells(start, today)
+    start = today - timedelta(days=730)
+    cells = cached_cells(start, today, source=source)
     active_dates = {c["date"] for c in cells if c["sessions"] > 0}
 
-    # Current streak: walk back from today
     current_len = 0
     cur = today
-    # Allow today to be empty (give user the day)
     if today.isoformat() not in active_dates:
         cur = today - timedelta(days=1)
     while cur.isoformat() in active_dates:
@@ -128,7 +167,6 @@ def compute_streaks() -> dict:
     current_start = (cur + timedelta(days=1)).isoformat() if current_len > 0 else today.isoformat()
     active_today = today.isoformat() in active_dates
 
-    # Best streak
     sorted_dates = sorted(active_dates)
     best_len = 0
     best_start = None
@@ -154,16 +192,8 @@ def compute_streaks() -> dict:
             best_end = sorted_dates[-1]
 
     return {
-        "current": {
-            "length": current_len,
-            "started": current_start,
-            "active_today": active_today,
-        },
-        "best": {
-            "length": best_len,
-            "started": best_start,
-            "ended": best_end,
-        },
+        "current": {"length": current_len, "started": current_start, "active_today": active_today},
+        "best": {"length": best_len, "started": best_start, "ended": best_end},
     }
 
 
@@ -186,14 +216,49 @@ async def ping():
     return {"ok": True}
 
 
+@router.get("/platforms")
+async def get_platforms():
+    try:
+        from hermes_state import SessionDB
+        db = SessionDB()
+        try:
+            sessions = db.search_sessions(limit=99999)
+            platforms = sorted({s.get("source", "cli") for s in sessions if s.get("source")})
+            return {"platforms": platforms}
+        finally:
+            db.close()
+    except ImportError:
+        return {"platforms": ["cli"]}
+
+
+def _compute_range(period: str, anchor: date) -> tuple[date, date]:
+    if period == "year":
+        end = anchor
+        start = end - timedelta(days=52 * 7 + anchor.weekday())
+    elif period == "month":
+        start = anchor.replace(day=1)
+        next_month = start.replace(day=28) + timedelta(days=4)
+        end = next_month - timedelta(days=next_month.day)
+    elif period == "week":
+        end = anchor
+        start = end - timedelta(days=6)
+    else:
+        start = anchor
+        end = anchor
+    return start, end
+
+
 @router.get("/data")
 async def get_data(
     metric: str = "sessions",
-    period: Literal["year", "month"] = "year",
+    period: str = "year",
     date: str | None = None,
+    source: str | None = None,
 ):
     if metric not in METRIC_FIELDS:
         raise HTTPException(400, f"Unknown metric: {metric}")
+    if period not in ("year", "month", "week", "day"):
+        raise HTTPException(400, f"Unknown period: {period}")
     try:
         anchor = (
             datetime.strptime(date, "%Y-%m-%d").date()
@@ -202,16 +267,28 @@ async def get_data(
     except ValueError:
         raise HTTPException(400, f"Invalid date: {date}")
 
-    if period == "year":
-        end = anchor
-        # Walk back to the nearest Monday
-        start = end - timedelta(days=52 * 7 + anchor.weekday())
-    else:
-        start = anchor.replace(day=1)
-        next_month = start.replace(day=28) + timedelta(days=4)
-        end = next_month - timedelta(days=next_month.day)
+    if period == "day":
+        cells = compute_hour_cells(anchor, source=source)
+        field = METRIC_FIELDS[metric]
+        values = [c[field] for c in cells]
+        for c in cells:
+            c["value"] = c[field]
+        return {
+            "metric": metric,
+            "period": period,
+            "anchor": anchor.isoformat(),
+            "cells": cells,
+            "max": max(values) if values else 0,
+            "total": sum(values),
+            "daily_avg": round(sum(values) / max(len(values), 1), 2),
+            "active_days": sum(1 for v in values if v > 0),
+            "buckets": quantile_buckets(values),
+            "range_start": anchor.isoformat(),
+            "range_end": anchor.isoformat(),
+        }
 
-    cells = cached_cells(start, end)
+    start, end = _compute_range(period, anchor)
+    cells = cached_cells(start, end, source=source)
     field = METRIC_FIELDS[metric]
     values = [c[field] for c in cells]
     for c in cells:
@@ -233,19 +310,18 @@ async def get_data(
 
 
 @router.get("/day/{date_str}")
-async def get_day(date_str: str):
+async def get_day(date_str: str, source: str | None = None):
     try:
         d = datetime.strptime(date_str, "%Y-%m-%d").date()
     except ValueError:
         raise HTTPException(400, f"Invalid date: {date_str}")
 
-    cells = cached_cells(d, d)
+    cells = cached_cells(d, d, source=source)
     cell = cells[0] if cells else {
         "sessions": 0, "tokens": 0, "input_tokens": 0,
         "output_tokens": 0, "tool_calls": 0, "cost": 0.0,
     }
 
-    # Get session list for the day
     sessions_list = []
     hour_counts = defaultdict(int)
     models: dict[str, dict] = {}
@@ -256,6 +332,8 @@ async def get_day(date_str: str):
         try:
             all_sessions = db.search_sessions(limit=99999)
             for s in all_sessions:
+                if source and s.get("source") != source:
+                    continue
                 ts_raw = s.get("started_at")
                 if ts_raw is None:
                     continue
@@ -309,20 +387,20 @@ async def get_day(date_str: str):
 
 
 @router.get("/streaks")
-async def get_streaks():
-    return compute_streaks()
+async def get_streaks(source: str | None = None):
+    return compute_streaks(source=source)
 
 
 @router.get("/summary")
-async def get_summary():
+async def get_summary(source: str | None = None):
     today = datetime.utcnow().date()
     start = today - timedelta(days=730)
-    cells = cached_cells(start, today)
+    cells = cached_cells(start, today, source=source)
     values = [c["sessions"] for c in cells]
     active = [(c["date"], c["sessions"]) for c in cells if c["sessions"] > 0]
 
     busiest = max(active, key=lambda x: x[1]) if active else (today.isoformat(), 0)
-    streaks = compute_streaks()
+    streaks = compute_streaks(source=source)
     first_date = active[0][0] if active else today.isoformat()
     first = datetime.strptime(first_date, "%Y-%m-%d").date()
 
@@ -338,19 +416,67 @@ async def get_summary():
 
 
 @router.get("/header-strip")
-async def get_header_strip():
+async def get_header_strip(source: str | None = None):
     today = datetime.utcnow().date()
-    # 84 cells = 12 weeks, ending today, aligned to Monday
     end = today
     start = end - timedelta(days=83)
-    cells = cached_cells(start, end)
-    # Keep only date + value for compactness
+    cells = cached_cells(start, end, source=source)
     values = [c["sessions"] for c in cells]
     stripped = [{"date": c["date"], "value": c["sessions"]} for c in cells]
-    streaks = compute_streaks()
+    streaks = compute_streaks(source=source)
 
     return {
         "cells": stripped,
         "buckets": quantile_buckets(values),
         "current_streak": streaks["current"]["length"],
     }
+
+
+@router.get("/export/csv")
+async def export_csv(
+    metric: str = "sessions",
+    period: str = "year",
+    date: str | None = None,
+    source: str | None = None,
+):
+    if metric not in METRIC_FIELDS:
+        raise HTTPException(400, f"Unknown metric: {metric}")
+    if period not in ("year", "month", "week", "day"):
+        raise HTTPException(400, f"Unknown period: {period}")
+    try:
+        anchor = (
+            datetime.strptime(date, "%Y-%m-%d").date()
+            if date else datetime.utcnow().date()
+        )
+    except ValueError:
+        raise HTTPException(400, f"Invalid date: {date}")
+
+    if period == "day":
+        cells = compute_hour_cells(anchor, source=source)
+        field = METRIC_FIELDS[metric]
+        for c in cells:
+            c["value"] = c[field]
+    else:
+        start, end = _compute_range(period, anchor)
+        cells = cached_cells(start, end, source=source)
+        field = METRIC_FIELDS[metric]
+        for c in cells:
+            c["value"] = c[field]
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    if period == "day":
+        writer.writerow(["hour", metric, "sessions", "tokens", "input_tokens", "output_tokens", "tool_calls", "cost"])
+        for c in cells:
+            writer.writerow([c["hour"], c["value"], c["sessions"], c["tokens"], c["input_tokens"], c["output_tokens"], c["tool_calls"], c["cost"]])
+    else:
+        writer.writerow(["date", metric, "sessions", "tokens", "input_tokens", "output_tokens", "tool_calls", "cost"])
+        for c in cells:
+            writer.writerow([c["date"], c["value"], c["sessions"], c["tokens"], c["input_tokens"], c["output_tokens"], c["tool_calls"], c["cost"]])
+
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=hermes-activity-{period}-{anchor.isoformat()}.csv"},
+    )

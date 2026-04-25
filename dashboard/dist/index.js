@@ -138,7 +138,7 @@
     var pitch = cellSize + CELL_GAP;
     var cols = 53;
     var svgWidth = PADDING_LEFT + cols * pitch;
-    var svgHeight = PADDING_TOP + 7 * pitch;
+    var svgHeight = PADDING_TOP + 7 * pitch + cellSize + 4;
 
     var monthLabels = useMemo(function () {
       var labels = [];

@@ -11,7 +11,7 @@
 .hm-card-content {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.625rem;
 }
 
 /* ============================================================
@@ -20,13 +20,21 @@
 .hm-header {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.4rem;
 }
 .hm-header-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.35rem;
+}
+.hm-header-nav {
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+}
+.hm-header-spacer {
+  flex: 1;
+  min-width: 0;
 }
 
 /* Period toggle group */
@@ -167,14 +175,18 @@
   display: flex;
   flex-direction: column;
   gap: 1px;
-  min-width: 70px;
+  min-width: 56px;
+  flex: 1 1 56px;
 }
 .hm-summary-val {
-  font-size: 20px;
+  font-size: clamp(15px, 2vw, 20px);
   font-weight: 700;
   font-family: var(--theme-font-mono, ui-monospace, monospace);
   color: var(--color-foreground);
   line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .hm-summary-lbl {
   font-size: 10px;
@@ -192,6 +204,7 @@
   overflow-y: visible;
   position: relative;
   width: 100%;
+  padding-bottom: 4px; /* prevent SVG legend from clipping */
 }
 .hm-svg {
   display: block;
@@ -271,8 +284,10 @@
   cursor: pointer;
   border: 1px solid var(--color-border);
   gap: 1px;
-  aspect-ratio: 1;
-  min-height: 36px;
+  aspect-ratio: 1 / 1;
+  min-height: 32px;
+  max-height: 64px;
+  overflow: hidden;
 }
 .hm-month-cell:hover {
   border-color: var(--color-ring);
@@ -296,8 +311,8 @@
 .hm-month-val {
   font-size: 8px;
   font-family: var(--theme-font-mono, ui-monospace, monospace);
-  opacity: 0.8;
-  color: var(--color-card);
+  opacity: 0.85;
+  color: var(--color-primary-foreground);
   line-height: 1;
 }
 
@@ -316,6 +331,8 @@
   align-items: flex-end;
   gap: 2px;
   height: 80px;
+  padding-bottom: 14px; /* reserve space for hour labels */
+  box-sizing: content-box;
 }
 .hm-day-bar-col {
   display: flex;
@@ -323,8 +340,8 @@
   align-items: center;
   justify-content: flex-end;
   flex: 1;
-  gap: 1px;
   height: 100%;
+  position: relative;
 }
 .hm-day-bar {
   width: 100%;
@@ -332,6 +349,7 @@
   border-radius: 2px 2px 0 0;
   min-height: 1px;
   opacity: 0.35;
+  flex-shrink: 0;
 }
 .hm-day-bar-active {
   background: var(--color-primary);
@@ -342,6 +360,11 @@
   font-family: var(--theme-font-mono, ui-monospace, monospace);
   color: var(--color-muted-foreground);
   line-height: 1;
+  position: absolute;
+  bottom: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
 }
 
 /* Compact legend */
@@ -367,8 +390,8 @@
    Tooltip
    ============================================================ */
 .hm-tooltip {
-  position: absolute;
-  z-index: 100;
+  position: fixed;
+  z-index: 9999;
   background: var(--color-popover);
   color: var(--color-popover-foreground);
   border: 1px solid var(--color-border);
@@ -602,7 +625,9 @@
   display: flex;
   align-items: flex-end;
   gap: 1px;
-  height: 44px;
+  height: 40px;
+  padding-bottom: 12px;
+  box-sizing: content-box;
 }
 .hm-dp-hour-col {
   display: flex;
@@ -610,8 +635,8 @@
   align-items: center;
   justify-content: flex-end;
   flex: 1;
-  gap: 1px;
   height: 100%;
+  position: relative;
 }
 .hm-dp-hour-bar {
   width: 100%;
@@ -619,6 +644,7 @@
   border-radius: 2px 2px 0 0;
   min-height: 1px;
   opacity: 0.4;
+  flex-shrink: 0;
 }
 .hm-dp-hour-active {
   background: var(--color-primary);
@@ -629,6 +655,11 @@
   font-family: var(--theme-font-mono, ui-monospace, monospace);
   color: var(--color-muted-foreground);
   line-height: 1;
+  position: absolute;
+  bottom: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
 }
 
 /* Models */

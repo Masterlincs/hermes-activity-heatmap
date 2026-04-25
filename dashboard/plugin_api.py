@@ -151,7 +151,7 @@ def quantile_buckets(values: list[float]) -> list[float]:
 # ---------------------------------------------------------------------------
 
 def compute_streaks(source: str | None = None) -> dict:
-    today = datetime.utcnow().date()
+    today = datetime.now().date()
     start = today - timedelta(days=730)
     cells = cached_cells(start, today, source=source)
     active_dates = {c["date"] for c in cells if c["sessions"] > 0}
@@ -262,17 +262,15 @@ async def get_data(
     try:
         anchor = (
             datetime.strptime(date, "%Y-%m-%d").date()
-            if date else datetime.utcnow().date()
+            if date else datetime.now().date()
         )
     except ValueError:
         raise HTTPException(400, f"Invalid date: {date}")
 
     if period == "day":
-        cells = compute_hour_cells(anchor, source=source)
         field = METRIC_FIELDS[metric]
-        values = [c[field] for c in cells]
-        for c in cells:
-            c["value"] = c[field]
+        cells = [dict(c, value=c[field]) for c in compute_hour_cells(anchor, source=source)]
+        values = [c["value"] for c in cells]
         return {
             "metric": metric,
             "period": period,
@@ -288,11 +286,9 @@ async def get_data(
         }
 
     start, end = _compute_range(period, anchor)
-    cells = cached_cells(start, end, source=source)
     field = METRIC_FIELDS[metric]
-    values = [c[field] for c in cells]
-    for c in cells:
-        c["value"] = c[field]
+    cells = [dict(c, value=c[field]) for c in cached_cells(start, end, source=source)]
+    values = [c["value"] for c in cells]
 
     return {
         "metric": metric,
@@ -356,7 +352,7 @@ async def get_day(date_str: str, source: str | None = None):
                     "id": s.get("id", ""),
                     "title": s.get("title") or s.get("summary") or "Untitled session",
                     "model": model_name,
-                    "started_at": ts.isoformat() + "Z",
+                    "started_at": datetime.utcfromtimestamp(float(ts_raw)).isoformat() + "Z",
                     "message_count": s.get("message_count", 0) or 0,
                     "tokens": input_t + output_t,
                     "cost": s.get("estimated_cost_usd", 0.0) or 0.0,
@@ -393,7 +389,7 @@ async def get_streaks(source: str | None = None):
 
 @router.get("/summary")
 async def get_summary(source: str | None = None):
-    today = datetime.utcnow().date()
+    today = datetime.now().date()
     start = today - timedelta(days=730)
     cells = cached_cells(start, today, source=source)
     values = [c["sessions"] for c in cells]
@@ -417,7 +413,7 @@ async def get_summary(source: str | None = None):
 
 @router.get("/header-strip")
 async def get_header_strip(source: str | None = None):
-    today = datetime.utcnow().date()
+    today = datetime.now().date()
     end = today
     start = end - timedelta(days=83)
     cells = cached_cells(start, end, source=source)
@@ -446,22 +442,17 @@ async def export_csv(
     try:
         anchor = (
             datetime.strptime(date, "%Y-%m-%d").date()
-            if date else datetime.utcnow().date()
+            if date else datetime.now().date()
         )
     except ValueError:
         raise HTTPException(400, f"Invalid date: {date}")
 
+    field = METRIC_FIELDS[metric]
     if period == "day":
-        cells = compute_hour_cells(anchor, source=source)
-        field = METRIC_FIELDS[metric]
-        for c in cells:
-            c["value"] = c[field]
+        cells = [dict(c, value=c[field]) for c in compute_hour_cells(anchor, source=source)]
     else:
         start, end = _compute_range(period, anchor)
-        cells = cached_cells(start, end, source=source)
-        field = METRIC_FIELDS[metric]
-        for c in cells:
-            c["value"] = c[field]
+        cells = [dict(c, value=c[field]) for c in cached_cells(start, end, source=source)]
 
     output = io.StringIO()
     writer = csv.writer(output)

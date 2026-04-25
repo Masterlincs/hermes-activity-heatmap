@@ -129,6 +129,8 @@
     var cells = props.cells;
     var buckets = props.buckets;
     var onCellClick = props.onCellClick;
+    var onCellHover = props.onCellHover;
+    var onCellUnhover = props.onCellUnhover;
     var metric = props.metric;
     var cellSize = props.cellSize;
 
@@ -189,9 +191,12 @@
           className: "hm-cell" + (isToday ? " hm-cell-today" : ""),
           style: { animationDelay: col * 8 + "ms", cursor: "pointer" },
           onClick: function () { onCellClick(cell.date); },
+          onMouseEnter: function (e) { onCellHover && onCellHover(cell, e); },
+          onMouseMove: function (e) { onCellHover && onCellHover(cell, e); },
+          onMouseLeave: function () { onCellUnhover && onCellUnhover(); },
         });
       });
-    }, [cells, buckets, cellSize, today, onCellClick]);
+    }, [cells, buckets, cellSize, today, onCellClick, onCellHover, onCellUnhover]);
 
     var legend = useMemo(function () {
       var fills = [0, 1, 2, 3, 4].map(function (i) {
@@ -227,6 +232,8 @@
     var cells = props.cells;
     var buckets = props.buckets;
     var onCellClick = props.onCellClick;
+    var onCellHover = props.onCellHover;
+    var onCellUnhover = props.onCellUnhover;
     var metric = props.metric;
 
     var today = todayISO();
@@ -260,6 +267,8 @@
               className: "hm-month-cell" + (isToday ? " hm-month-cell-today" : ""),
               style: { background: cellFill(cell.value, buckets) },
               onClick: function () { onCellClick(cell.date); },
+              onMouseEnter: function (e) { onCellHover && onCellHover(cell, e); },
+              onMouseLeave: function () { onCellUnhover && onCellUnhover(); },
             },
               React.createElement("span", { className: "hm-month-daynum" }, dayNum),
               cell.value > 0 && React.createElement("span", { className: "hm-month-val" }, metricFmt(metric, cell.value)),
@@ -278,6 +287,8 @@
     var cells = props.cells;
     var buckets = props.buckets;
     var onCellClick = props.onCellClick;
+    var onCellHover = props.onCellHover;
+    var onCellUnhover = props.onCellUnhover;
     var metric = props.metric;
     var cellSize = props.cellSize;
 
@@ -296,9 +307,12 @@
           className: "hm-cell" + (isToday ? " hm-cell-today" : ""),
           style: { cursor: "pointer" },
           onClick: function () { onCellClick(cell.date); },
+          onMouseEnter: function (e) { onCellHover && onCellHover(cell, e); },
+          onMouseMove: function (e) { onCellHover && onCellHover(cell, e); },
+          onMouseLeave: function () { onCellUnhover && onCellUnhover(); },
         });
       });
-    }, [cells, buckets, cellSize, pitch, today, onCellClick]);
+    }, [cells, buckets, cellSize, pitch, today, onCellClick, onCellHover, onCellUnhover]);
 
     var labels = useMemo(function () {
       if (!cells) return null;
@@ -605,17 +619,19 @@
 
             React.createElement("h4", { className: "hm-dp-section-title" }, "By hour"),
             React.createElement("div", { className: "hm-dp-hour-wrap" },
-              data.hour_breakdown.map(function (h) {
+              (function () {
                 var maxH = 1;
                 for (var i = 0; i < data.hour_breakdown.length; i++) {
                   if (data.hour_breakdown[i].sessions > maxH) maxH = data.hour_breakdown[i].sessions;
                 }
-                var barH = h.sessions > 0 ? Math.round((h.sessions / maxH) * 32) : 1;
-                return React.createElement("div", { key: h.hour, className: "hm-dp-hour-col", title: h.hour + ":00 - " + h.sessions + " sessions" },
-                  React.createElement("div", { className: "hm-dp-hour-bar" + (h.sessions > 0 ? " hm-dp-hour-active" : ""), style: { height: barH + "px" } }),
-                  h.hour % 6 === 0 && React.createElement("span", { className: "hm-dp-hour-label" }, h.hour),
-                );
-              }),
+                return data.hour_breakdown.map(function (h) {
+                  var barH = h.sessions > 0 ? Math.round((h.sessions / maxH) * 32) : 1;
+                  return React.createElement("div", { key: h.hour, className: "hm-dp-hour-col", title: h.hour + ":00 - " + h.sessions + " sessions" },
+                    React.createElement("div", { className: "hm-dp-hour-bar" + (h.sessions > 0 ? " hm-dp-hour-active" : ""), style: { height: barH + "px" } }),
+                    h.hour % 6 === 0 && React.createElement("span", { className: "hm-dp-hour-label" }, h.hour),
+                  );
+                });
+              })(),
             ),
 
             data.models_used.length > 0 && React.createElement(React.Fragment, null,
@@ -728,18 +744,20 @@
         ),
 
         React.createElement(PlatformFilter, { platforms: platforms, value: platformVal, onChange: setPlatformVal }),
+      ),
 
+      React.createElement("div", { className: "hm-header-row hm-header-nav" },
         React.createElement("div", { className: "hm-year-nav" },
           React.createElement("button", {
             className: "hm-year-btn",
             onClick: function () { shiftYear(-1); },
-          }, "\u25C0"),
+          }, "◀"),
           React.createElement("span", { className: "hm-year-label" }, String(anchorYear)),
           React.createElement("button", {
             className: "hm-year-btn",
             onClick: function () { shiftYear(1); },
             disabled: isThisYear,
-          }, "\u25B6"),
+          }, "▶"),
           !isThisYear && React.createElement("button", {
             className: "hm-year-back",
             onClick: function () { setAnchor(today); },
@@ -747,6 +765,8 @@
         ),
 
         React.createElement(StreakBadge, { streaks: streaks }),
+
+        React.createElement("div", { className: "hm-header-spacer" }),
 
         React.createElement("div", { className: "hm-export-group" },
           React.createElement(Button, { variant: "outline", size: "sm", className: "hm-export-btn", onClick: onExportCSV }, "CSV"),
@@ -829,6 +849,8 @@
     var data = props.data;
     var period = props.period;
     var onCellClick = props.onCellClick;
+    var onCellHover = props.onCellHover;
+    var onCellUnhover = props.onCellUnhover;
     var metric = props.metric;
     var cellSize = props.cellSize;
     var containerRef = props.containerRef;
@@ -839,13 +861,13 @@
     var buckets = data.buckets;
 
     if (period === "year") {
-      return React.createElement(YearGrid, { cells: cells, buckets: buckets, onCellClick: onCellClick, metric: metric, cellSize: cellSize, containerRef: containerRef });
+      return React.createElement(YearGrid, { cells: cells, buckets: buckets, onCellClick: onCellClick, onCellHover: onCellHover, onCellUnhover: onCellUnhover, metric: metric, cellSize: cellSize, containerRef: containerRef });
     }
     if (period === "month") {
-      return React.createElement(MonthGrid, { cells: cells, buckets: buckets, onCellClick: onCellClick, metric: metric, cellSize: cellSize });
+      return React.createElement(MonthGrid, { cells: cells, buckets: buckets, onCellClick: onCellClick, onCellHover: onCellHover, onCellUnhover: onCellUnhover, metric: metric, cellSize: cellSize });
     }
     if (period === "week") {
-      return React.createElement(WeekGrid, { cells: cells, buckets: buckets, onCellClick: onCellClick, metric: metric, cellSize: cellSize });
+      return React.createElement(WeekGrid, { cells: cells, buckets: buckets, onCellClick: onCellClick, onCellHover: onCellHover, onCellUnhover: onCellUnhover, metric: metric, cellSize: cellSize });
     }
     return null;
   }
@@ -933,6 +955,15 @@
       setSelectedDate(date);
     }
 
+    function onCellHover(cell, e) {
+      if (tooltipTimeout.current) { clearTimeout(tooltipTimeout.current); tooltipTimeout.current = null; }
+      setTooltip({ cell: cell, x: e.clientX, y: e.clientY });
+    }
+
+    function onCellUnhover() {
+      tooltipTimeout.current = setTimeout(function () { setTooltip(null); }, 80);
+    }
+
     // Export CSV
     function onExportCSV() {
       var params = "metric=" + encodeURIComponent(metric) + "&period=" + encodeURIComponent(period) + "&date=" + encodeURIComponent(anchor);
@@ -954,6 +985,7 @@
       var blob = new Blob([xml], { type: "image/svg+xml;charset=utf-8" });
       var url = URL.createObjectURL(blob);
       var img = new Image();
+      img.onerror = function () { URL.revokeObjectURL(url); };
       img.onload = function () {
         var canvas = document.createElement("canvas");
         canvas.width = svg.clientWidth * 2;
@@ -1009,11 +1041,19 @@
                   data: data,
                   period: period,
                   onCellClick: onCellClick,
+                  onCellHover: onCellHover,
+                  onCellUnhover: onCellUnhover,
                   metric: metric,
                   cellSize: cellSize,
                 }),
               )
         ),
+
+        tooltip && React.createElement(HeatmapTooltip, {
+          cell: tooltip.cell,
+          mouseX: tooltip.x,
+          mouseY: tooltip.y,
+        }),
 
         selectedDate && React.createElement(DayPanel, {
           date: selectedDate,

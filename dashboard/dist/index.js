@@ -83,28 +83,42 @@
   }
 
   // -------------------------------------------------------------------------
-  // Responsive cell size hook
+  // Responsive cell size hook — returns { cellSize, ref }
+  // ref is a callback ref that attaches ResizeObserver on mount
   // -------------------------------------------------------------------------
 
-  function useCellSize(containerRef, cols) {
+  function useCellSize(cols) {
     var _useState = useState(14);
     var size = _useState[0];
     var setSize = _useState[1];
 
-    useEffect(function () {
-      var el = containerRef.current;
+    var roRef = useRef(null);
+
+    var callbackRef = useCallback(function (el) {
+      if (roRef.current) {
+        roRef.current.disconnect();
+        roRef.current = null;
+      }
       if (!el) return;
-      var ro = new ResizeObserver(function (entries) {
-        var w = entries[0].contentRect.width;
+      function measure(w) {
         var avail = w - PADDING_LEFT - 16;
         var s = Math.floor((avail - CELL_GAP * (cols - 1)) / cols);
         setSize(Math.max(MIN_CELL, Math.min(MAX_CELL, s)));
+      }
+      measure(el.getBoundingClientRect().width);
+      roRef.current = new ResizeObserver(function (entries) {
+        measure(entries[0].contentRect.width);
       });
-      ro.observe(el);
-      return function () { ro.disconnect(); };
-    }, [containerRef, cols]);
+      roRef.current.observe(el);
+    }, [cols]);
 
-    return size;
+    useEffect(function () {
+      return function () {
+        if (roRef.current) roRef.current.disconnect();
+      };
+    }, []);
+
+    return { cellSize: size, ref: callbackRef };
   }
 
   // -------------------------------------------------------------------------
@@ -117,7 +131,6 @@
     var onCellClick = props.onCellClick;
     var metric = props.metric;
     var cellSize = props.cellSize;
-    var containerRef = props.containerRef;
 
     var today = todayISO();
     var pitch = cellSize + CELL_GAP;
@@ -198,14 +211,12 @@
       );
     }, [svgWidth, svgHeight, cellSize]);
 
-    return React.createElement("div", { ref: containerRef, className: "hm-grid-wrap" },
-      React.createElement("svg", { className: "hm-svg", width: svgWidth, height: svgHeight },
+    return React.createElement("svg", { className: "hm-svg", width: svgWidth, height: svgHeight },
         dayLabels,
         monthLabelEls,
         rects,
         legend,
-      ),
-    );
+      );
   }
 
   // -------------------------------------------------------------------------
@@ -879,9 +890,10 @@
     var tooltip = _useState18[0];
     var setTooltip = _useState18[1];
 
-    var containerRef = useRef(null);
     var cols = period === "year" ? 53 : period === "month" ? 7 : period === "week" ? 7 : 24;
-    var cellSize = useCellSize(containerRef, cols);
+    var _useCellSize = useCellSize(cols);
+    var cellSize = _useCellSize.cellSize;
+    var gridRef = _useCellSize.ref;
 
     var tooltipTimeout = useRef(null);
 
@@ -986,19 +998,21 @@
 
         hasNoData && React.createElement(EmptyState, null),
 
-        !loading && !hasNoData && data && data.cells && data.cells.length > 0 && (period === "day"
-          ? React.createElement("div", { ref: containerRef, className: "hm-grid-wrap" },
-              React.createElement(DayBars, { cells: data.cells, cellSize: cellSize }),
-              React.createElement(CompactLegend, { buckets: buckets }),
-            )
-          : React.createElement(HeatmapGrid, {
-              data: data,
-              period: period,
-              onCellClick: onCellClick,
-              metric: metric,
-              cellSize: cellSize,
-              containerRef: containerRef,
-            })
+        !loading && !hasNoData && data && data.cells && data.cells.length > 0 && (
+          period === "day"
+            ? React.createElement("div", { ref: gridRef, className: "hm-grid-wrap" },
+                React.createElement(DayBars, { cells: data.cells, cellSize: cellSize }),
+                React.createElement(CompactLegend, { buckets: buckets }),
+              )
+            : React.createElement("div", { ref: gridRef, className: "hm-grid-wrap" },
+                React.createElement(HeatmapGrid, {
+                  data: data,
+                  period: period,
+                  onCellClick: onCellClick,
+                  metric: metric,
+                  cellSize: cellSize,
+                }),
+              )
         ),
 
         selectedDate && React.createElement(DayPanel, {

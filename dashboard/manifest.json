@@ -1,0 +1,15 @@
+{
+  "name": "activity-heatmap",
+  "label": "Activity",
+  "description": "GitHub-style heatmap of your agent usage with streak tracking and per-day drill-down",
+  "icon": "BarChart3",
+  "version": "1.0.0",
+  "tab": {
+    "path": "/activity",
+    "position": "after:analytics"
+  },
+  "slots": ["header-banner"],
+  "entry": "dist/index.js",
+  "css": "dist/style.css",
+  "api": "plugin_api.py"
+}

@@ -2,19 +2,39 @@
 
 GitHub-style contribution heatmap for the [Hermes Agent](https://github.com/NousResearch/hermes-agent) dashboard. Track your agent usage at a glance — sessions, tokens, tool calls, and cost — across four time scales with click-through drill-down and streak tracking.
 
-## Screenshot
+## Screenshots
 
-> *Year view — full heatmap with inline metric/platform filters, streak badge, and legend*
->
-> ![Year view](./screenshots/year-view.png)
+**Year view** — full heatmap with inline metric/platform filters, streak badge, and legend
 
-> *Month view — true calendar grid with per-day values*
->
-> ![Month view](./screenshots/month-view.png)
+![Year view](./screenshots/year_view.png)
 
-> *Day panel — click any cell to see sessions, hour breakdown, and models used*
->
-> ![Day panel](./screenshots/day-panel.png)
+**Month view** — true calendar grid with per-day values
+
+![Month view](./screenshots/month_view.png)
+
+**Week view** — 7-day column view with colored bars
+
+![Week view](./screenshots/week_view.png)
+
+**Day view** — 24-hour bar chart
+
+![Day view](./screenshots/day_view.png)
+
+**Tooltip** — hover any cell for quick stats
+
+![Tooltip](./screenshots/tool_tip.png)
+
+**Expanded tooltip** — detailed view on hover
+
+![Expanded tooltip](./screenshots/expanded_tool_tip.png)
+
+**Session view** — click a session to view messages inline
+
+![Session view](./screenshots/tool_tip_session_view.png)
+
+**Header strip** — compact 12-week mini heatmap in the top nav
+
+![Header strip](./screenshots/top_heatmap_view.png)
 
 ## Features
 

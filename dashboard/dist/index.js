@@ -13,8 +13,6 @@
   var CardContent = SDK.components.CardContent;
   var Badge = SDK.components.Badge;
   var Button = SDK.components.Button;
-  var Select = SDK.components.Select;
-  var SelectOption = SDK.components.SelectOption;
 
   // -------------------------------------------------------------------------
   // Constants
@@ -328,6 +326,9 @@
 
   function DayBars(props) {
     var cells = props.cells;
+    var onCellHover = props.onCellHover;
+    var onCellUnhover = props.onCellUnhover;
+    var anchor = props.anchor;
 
     var maxVal = 1;
     if (cells) {
@@ -343,7 +344,12 @@
         cells.map(function (c) {
           var pct = c.value > 0 ? Math.max(2, Math.round((c.value / maxVal) * 100)) : 1;
           var isActive = c.value > 0;
-          return React.createElement("div", { key: c.hour, className: "hm-day-bar-col", title: c.hour + ":00 — " + c.value + " sessions" },
+          var tooltipCell = { date: anchor, sessions: c.value || 0, tokens: c.tokens || 0, cost: c.cost || 0 };
+          return React.createElement("div", { key: c.hour, className: "hm-day-bar-col",
+            onMouseEnter: function (e) { onCellHover && onCellHover(tooltipCell, e); },
+            onMouseMove: function (e) { onCellHover && onCellHover(tooltipCell, e); },
+            onMouseLeave: function () { onCellUnhover && onCellUnhover(); },
+          },
             React.createElement("div", {
               className: "hm-day-bar" + (isActive ? " hm-day-bar-active" : ""),
               style: { height: pct + "%" },
@@ -434,24 +440,25 @@
   }
 
   // -------------------------------------------------------------------------
-  // Metric selector
+  // Metric selector — inline button group
   // -------------------------------------------------------------------------
 
   function MetricSelect(props) {
     var value = props.value;
     var onChange = props.onChange;
-    var opts = METRICS.map(function (m) {
-      return React.createElement(SelectOption, { key: m.key, value: m.key }, m.label);
-    });
-    return React.createElement(Select, {
-      value: value,
-      onValueChange: onChange,
-      className: "hm-metric-select",
-    }, opts);
+    return React.createElement("div", { className: "hm-metric-group" },
+      METRICS.map(function (m) {
+        return React.createElement("button", {
+          key: m.key,
+          className: "hm-metric-btn" + (value === m.key ? " hm-active" : ""),
+          onClick: function () { onChange(m.key); },
+        }, m.label);
+      }),
+    );
   }
 
   // -------------------------------------------------------------------------
-  // Platform filter
+  // Platform filter — inline button group
   // -------------------------------------------------------------------------
 
   function PlatformFilter(props) {
@@ -461,18 +468,19 @@
 
     if (!platforms || platforms.length <= 1) return null;
 
-    var opts = [React.createElement(SelectOption, { key: "", value: "all" }, "All platforms")];
-    for (var i = 0; i < platforms.length; i++) {
-      opts.push(React.createElement(SelectOption, { key: platforms[i], value: platforms[i] },
-        platforms[i].charAt(0).toUpperCase() + platforms[i].slice(1)
-      ));
-    }
-
-    return React.createElement(Select, {
-      value: value || "all",
-      onValueChange: onChange,
-      className: "hm-platform-select",
-    }, opts);
+    return React.createElement("div", { className: "hm-platform-group" },
+      React.createElement("button", {
+        className: "hm-platform-btn" + ((!value || value === "all") ? " hm-active" : ""),
+        onClick: function () { onChange("all"); },
+      }, "All"),
+      platforms.map(function (p) {
+        return React.createElement("button", {
+          key: p,
+          className: "hm-platform-btn" + (value === p ? " hm-active" : ""),
+          onClick: function () { onChange(p); },
+        }, p.charAt(0).toUpperCase() + p.slice(1));
+      }),
+    );
   }
 
   // -------------------------------------------------------------------------
@@ -517,14 +525,6 @@
         React.createElement("span", null, session.message_count + " msgs"),
         React.createElement("span", null, metricFmt("tokens", session.tokens) + " tok"),
         React.createElement("span", null, "$" + Number(session.cost || 0).toFixed(3)),
-      ),
-      React.createElement("div", { className: "hm-sv-actions" },
-        React.createElement(Button, {
-          variant: "outline",
-          size: "sm",
-          className: "hm-sv-chat-btn",
-          onClick: function () { window.location.hash = "/chat?resume=" + encodeURIComponent(session.id); },
-        }, "Resume in Chat"),
       ),
       loading && React.createElement("div", { className: "hm-sv-loading" }, "Loading messages..."),
       error && React.createElement("div", { className: "hm-sv-error" }, error),
@@ -681,15 +681,21 @@
     var cell = props.cell;
     var mouseX = props.mouseX;
     var mouseY = props.mouseY;
+    var metric = props.metric;
     if (!cell) return null;
+
+    var header = cell.hour != null
+      ? cell.hour + ":00"
+      : formatShortDate(cell.date);
+
+    var valText = cell.sessions + " session" + (cell.sessions !== 1 ? "s" : "");
+
     return React.createElement("div", {
       className: "hm-tooltip",
       style: { left: mouseX + 14 + "px", top: mouseY - 42 + "px", pointerEvents: "none" },
     },
-      React.createElement("div", { className: "hm-tt-date" }, formatShortDate(cell.date)),
-      React.createElement("div", { className: "hm-tt-val" },
-        cell.sessions + " session" + (cell.sessions !== 1 ? "s" : ""),
-      ),
+      React.createElement("div", { className: "hm-tt-date" }, header),
+      React.createElement("div", { className: "hm-tt-val" }, valText),
       (cell.tokens > 0 || cell.cost > 0) && React.createElement("div", { className: "hm-tt-meta" },
         metricFmt("tokens", cell.tokens) + " tokens · $" + Number(cell.cost || 0).toFixed(3),
       ),
@@ -710,23 +716,9 @@
     var platformVal = props.platformVal;
     var setPlatformVal = props.setPlatformVal;
 
-    var anchorYear = new Date(anchor + "T12:00:00").getFullYear();
-    var periodLabel = period.charAt(0).toUpperCase() + period.slice(1);
-
     return React.createElement("div", { className: "hm-header" },
-      React.createElement("div", { className: "hm-title-block" },
-        React.createElement("div", { className: "hm-title" },
-          "Activity",
-          React.createElement(MetricSelect, { value: metric, onChange: setMetric }),
-        ),
-        React.createElement("div", { className: "hm-title-meta" },
-          periodLabel + " view · click any cell for details",
-        ),
-      ),
-
-      React.createElement("div", { style: { display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" } },
-        React.createElement(PlatformFilter, { platforms: platforms, value: platformVal, onChange: setPlatformVal }),
-
+      React.createElement("div", { className: "hm-header-top" },
+        React.createElement("div", { className: "hm-title" }, "Activity"),
         React.createElement("div", { className: "hm-period-group" },
           PERIODS.map(function (p) {
             return React.createElement("button", {
@@ -736,6 +728,10 @@
             }, p.charAt(0).toUpperCase() + p.slice(1));
           }),
         ),
+      ),
+      React.createElement("div", { className: "hm-header-filters" },
+        React.createElement(MetricSelect, { value: metric, onChange: setMetric }),
+        React.createElement(PlatformFilter, { platforms: platforms, value: platformVal, onChange: setPlatformVal }),
       ),
     );
   }
@@ -900,7 +896,7 @@
   }
 
   // -------------------------------------------------------------------------
-  // Main heatmap card (registered in analytics:bottom slot)
+  // Main heatmap card (registered in analytics:top slot)
   // -------------------------------------------------------------------------
 
   function HeatmapCard() {
@@ -1058,7 +1054,7 @@
         });
       }
       if (period === "day") {
-        return React.createElement(DayBars, { cells: cells });
+        return React.createElement(DayBars, { cells: cells, onCellHover: onCellHover, onCellUnhover: onCellUnhover, anchor: anchor });
       }
       return null;
     }
@@ -1157,7 +1153,7 @@
   // -------------------------------------------------------------------------
 
   window.__HERMES_PLUGINS__.register("activity-heatmap", HeatmapCard);
-  window.__HERMES_PLUGINS__.registerSlot("activity-heatmap", "analytics:bottom", HeatmapCard);
+  window.__HERMES_PLUGINS__.registerSlot("activity-heatmap", "analytics:top", HeatmapCard);
   window.__HERMES_PLUGINS__.registerSlot("activity-heatmap", "header-banner", HeaderStripWidget);
 
 })();

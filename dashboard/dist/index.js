@@ -326,6 +326,7 @@
 
   function DayBars(props) {
     var cells = props.cells;
+    var onCellClick = props.onCellClick;
     var onCellHover = props.onCellHover;
     var onCellUnhover = props.onCellUnhover;
     var anchor = props.anchor;
@@ -341,11 +342,12 @@
 
     return React.createElement("div", { className: "hm-day-grid" },
       React.createElement("div", { className: "hm-day-bars" },
-        cells.map(function (c) {
+        cells.map(function (c, i) {
           var pct = c.value > 0 ? Math.max(2, Math.round((c.value / maxVal) * 100)) : 1;
           var isActive = c.value > 0;
-          var tooltipCell = { date: anchor, sessions: c.value || 0, tokens: c.tokens || 0, cost: c.cost || 0 };
+          var tooltipCell = { date: anchor, hour: c.hour, sessions: c.sessions || 0, tokens: c.tokens || 0, cost: c.cost || 0 };
           return React.createElement("div", { key: c.hour, className: "hm-day-bar-col",
+            onClick: function () { onCellClick(anchor); },
             onMouseEnter: function (e) { onCellHover && onCellHover(tooltipCell, e); },
             onMouseMove: function (e) { onCellHover && onCellHover(tooltipCell, e); },
             onMouseLeave: function () { onCellUnhover && onCellUnhover(); },
@@ -1054,7 +1056,7 @@
         });
       }
       if (period === "day") {
-        return React.createElement(DayBars, { cells: cells, onCellHover: onCellHover, onCellUnhover: onCellUnhover, anchor: anchor });
+        return React.createElement(DayBars, { cells: cells, onCellClick: onCellClick, onCellHover: onCellHover, onCellUnhover: onCellUnhover, anchor: anchor });
       }
       return null;
     }

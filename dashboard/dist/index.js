@@ -764,6 +764,8 @@
           }, "Back to today"),
         ),
 
+        React.createElement("span", { style: { fontSize: "2rem", fontWeight: 700 } }, "test"),
+
         React.createElement(StreakBadge, { streaks: streaks }),
 
         React.createElement("div", { className: "hm-header-spacer" }),

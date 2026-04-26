@@ -1,58 +1,86 @@
 /* ============================================================
-   Activity Heatmap Plugin  - All styles use theme CSS vars
+   Activity Heatmap Plugin
+   All styles use Hermes dashboard theme tokens.
    ============================================================ */
 
-/* Card wrapper */
+/* ------------------------------------------------------------
+   Card surface
+   ------------------------------------------------------------ */
 .hm-card {
   margin-top: 0;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg, 12px);
+  border-radius: var(--radius-lg, 8px);
+  background: var(--color-card);
 }
 .hm-card-content {
   display: flex;
   flex-direction: column;
-  gap: 0.625rem;
+  gap: 14px;
+  padding: 16px 18px !important;
 }
 
-/* ============================================================
-   Header bar
-   ============================================================ */
+/* ------------------------------------------------------------
+   Header row — single row: title block, period segmented control
+   ------------------------------------------------------------ */
 .hm-header {
   display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-.hm-header-row {
-  display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 0.35rem;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
 }
-.hm-header-nav {
-  flex-wrap: nowrap;
-  gap: 0.5rem;
-}
-.hm-header-spacer {
-  flex: 1;
+.hm-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   min-width: 0;
 }
-
-/* Period toggle group */
-.hm-period-group {
+.hm-title {
+  font-size: 14px;
+  font-weight: 600;
+  font-family: var(--theme-font-sans, system-ui, sans-serif);
+  color: var(--color-foreground);
+  line-height: 1.2;
   display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hm-title-meta {
+  font-size: 11px;
+  color: var(--color-muted-foreground);
+  font-family: var(--theme-font-sans, system-ui, sans-serif);
+  line-height: 1.3;
+}
+.hm-metric-select {
+  width: auto;
+  min-width: 110px;
+  font-size: 12px;
+  font-family: var(--theme-font-sans, system-ui, sans-serif);
+  font-weight: 500;
+}
+
+/* Segmented period control */
+.hm-period-group {
+  display: inline-flex;
   border: 1px solid var(--color-border);
-  border-radius: 6px;
+  border-radius: var(--radius-md, 6px);
   overflow: hidden;
+  background: color-mix(in srgb, var(--color-foreground) 3%, transparent);
 }
 .hm-period-btn {
-  padding: 3px 10px;
-  font-size: 12px;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 500;
   font-family: var(--theme-font-sans, system-ui, sans-serif);
   background: transparent;
   border: none;
   cursor: pointer;
   color: var(--color-muted-foreground);
   transition: background 120ms, color 120ms;
+  letter-spacing: 0.01em;
+}
+.hm-period-btn + .hm-period-btn {
+  border-left: 1px solid var(--color-border);
 }
 .hm-period-btn.hm-active {
   background: var(--color-primary);
@@ -63,170 +91,85 @@
   color: var(--color-accent-foreground);
 }
 
-/* Metric picker */
-.hm-metric-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 3px;
-}
-.hm-metric-btn {
-  padding: 3px 8px;
-  font-size: 11px;
-  font-family: var(--theme-font-sans, system-ui, sans-serif);
-  border-radius: 99px;
-  border: 1px solid var(--color-border);
-  background: transparent;
-  cursor: pointer;
-  color: var(--color-muted-foreground);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  transition: background 120ms, color 120ms, border-color 120ms;
-}
-.hm-metric-btn.hm-active {
-  background: var(--color-primary);
-  color: var(--color-primary-foreground);
-  border-color: var(--color-primary);
-}
-.hm-metric-btn:hover:not(.hm-active) {
-  background: var(--color-accent);
-  color: var(--color-accent-foreground);
-}
-
 /* Platform filter */
-.hm-platform-filter {
-  display: inline-flex;
-}
 .hm-platform-select {
-  width: 140px;
-  font-size: 11px;
+  min-width: 140px;
+  font-size: 12px;
   font-family: var(--theme-font-sans, system-ui, sans-serif);
 }
 
-/* Year navigation */
-.hm-year-nav {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.hm-year-btn {
-  padding: 2px 6px;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  background: transparent;
-  color: var(--color-foreground);
-  cursor: pointer;
-  font-size: 11px;
-  line-height: 1.4;
-}
-.hm-year-btn:disabled {
-  opacity: 0.35;
-  cursor: default;
-}
-.hm-year-label {
-  font-size: 13px;
-  font-weight: 600;
-  font-family: var(--theme-font-sans, system-ui, sans-serif);
-  color: var(--color-foreground);
-  min-width: 3.5ch;
-  text-align: center;
-}
-.hm-year-back {
-  font-size: 11px;
-  padding: 2px 6px;
-  border: none;
-  background: transparent;
-  color: var(--color-primary);
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  font-family: var(--theme-font-sans, system-ui, sans-serif);
-}
-
-/* Export buttons */
-.hm-export-group {
-  display: flex;
-  gap: 4px;
-  margin-left: auto;
-}
-.hm-export-btn {
-  font-size: 11px;
-  font-family: var(--theme-font-sans, system-ui, sans-serif);
-  height: auto;
-  padding: 3px 10px;
-}
-
-/* Streak badge */
-.hm-streak {
-  font-size: 11px;
-  font-family: var(--theme-font-sans, system-ui, sans-serif);
-  white-space: nowrap;
-  cursor: default;
-}
-
-/* ============================================================
-   Summary row
-   ============================================================ */
+/* ------------------------------------------------------------
+   Summary stats row
+   ------------------------------------------------------------ */
 .hm-summary-row {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 16px;
 }
 .hm-summary-stat {
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  min-width: 56px;
-  flex: 1 1 56px;
+  gap: 2px;
+  min-width: 0;
 }
 .hm-summary-val {
-  font-size: clamp(15px, 2vw, 20px);
+  font-size: clamp(16px, 2vw, 20px);
   font-weight: 700;
   font-family: var(--theme-font-mono, ui-monospace, monospace);
   color: var(--color-foreground);
   line-height: 1.2;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .hm-summary-lbl {
-  font-size: 10px;
+  font-size: 9px;
   font-family: var(--theme-font-sans, system-ui, sans-serif);
   color: var(--color-muted-foreground);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
+  font-weight: 500;
 }
 
-/* ============================================================
-   Grid layout
-   ============================================================ */
-.hm-grid-wrap {
-  overflow-x: auto;
-  overflow-y: visible;
+/* ------------------------------------------------------------
+   Standardised grid slot — every view fills this
+   ------------------------------------------------------------ */
+.hm-grid-slot {
   position: relative;
   width: 100%;
-  padding-bottom: 4px; /* prevent SVG legend from clipping */
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
-.hm-svg {
-  display: block;
+.hm-grid-slot-inner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
-/* Text helpers */
-.hm-text-meta {
-  font-size: 9px;
-  font-family: var(--theme-font-sans, system-ui, sans-serif);
-  fill: var(--color-muted-foreground);
+.hm-svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
 }
+
+/* SVG text helpers */
+.hm-text-meta,
 .hm-text-legend {
   font-size: 9px;
   font-family: var(--theme-font-sans, system-ui, sans-serif);
   fill: var(--color-muted-foreground);
 }
 
-/* ============================================================
-   Heatmap cells
-   ============================================================ */
+/* ------------------------------------------------------------
+   Heatmap cells — shared
+   ------------------------------------------------------------ */
 .hm-cell {
-  animation: hm-reveal 300ms ease-out backwards;
+  animation: hm-reveal 240ms ease-out backwards;
   transition: stroke 100ms;
 }
 .hm-cell:hover {
@@ -234,13 +177,12 @@
   stroke-width: 1.5;
 }
 .hm-cell-today {
-  animation: hm-reveal 300ms ease-out backwards, hm-pulse 2s ease-in-out 300ms infinite;
+  animation: hm-reveal 240ms ease-out backwards, hm-pulse 2.4s ease-in-out 240ms infinite;
   stroke: var(--color-foreground);
   stroke-width: 1.5;
 }
-
 @keyframes hm-reveal {
-  from { opacity: 0; transform: scale(0.6); }
+  from { opacity: 0; transform: scale(0.7); }
   to   { opacity: 1; transform: scale(1); }
 }
 @keyframes hm-pulse {
@@ -248,54 +190,75 @@
   50%      { stroke-opacity: 1; }
 }
 
-/* ============================================================
-   Month grid
-   ============================================================ */
-.hm-month-grid {
-  display: inline-block;
+/* ------------------------------------------------------------
+   Year view — SVG, fits slot
+   ------------------------------------------------------------ */
+.hm-year-wrap {
   width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ------------------------------------------------------------
+   Month view — true calendar, 7×6 grid filling slot
+   ------------------------------------------------------------ */
+.hm-month-grid {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  gap: 4px;
 }
 .hm-month-header {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 3px;
-  margin-bottom: 2px;
+  gap: 4px;
+  flex-shrink: 0;
 }
 .hm-month-dow {
   text-align: center;
-  font-size: 10px;
+  font-size: 9px;
   font-family: var(--theme-font-sans, system-ui, sans-serif);
-  font-weight: 500;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
   color: var(--color-muted-foreground);
-  padding: 2px 0;
+  padding: 1px 0 3px;
 }
-.hm-month-week {
+.hm-month-body {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 3px;
-  margin-bottom: 3px;
+  grid-auto-rows: 1fr;
+  gap: 4px;
+  flex: 1;
+  min-height: 0;
 }
 .hm-month-cell {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
+  justify-content: space-between;
+  border-radius: var(--radius-md, 6px);
   cursor: pointer;
   border: 1px solid var(--color-border);
-  gap: 1px;
-  aspect-ratio: 1 / 1;
-  min-height: 32px;
-  max-height: 64px;
+  padding: 4px 6px;
   overflow: hidden;
+  transition: border-color 100ms, transform 100ms;
+  min-height: 0;
 }
 .hm-month-cell:hover {
   border-color: var(--color-ring);
+  transform: translateY(-1px);
 }
 .hm-month-cell-empty {
   background: transparent;
-  border: none;
+  border-color: transparent;
   cursor: default;
+}
+.hm-month-cell-empty:hover {
+  border-color: transparent;
+  transform: none;
 }
 .hm-month-cell-today {
   border-color: var(--color-foreground);
@@ -306,79 +269,216 @@
   font-weight: 600;
   font-family: var(--theme-font-sans, system-ui, sans-serif);
   color: var(--color-foreground);
-  line-height: 1.1;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 .hm-month-val {
-  font-size: 8px;
+  font-size: 9px;
   font-family: var(--theme-font-mono, ui-monospace, monospace);
+  color: var(--color-foreground);
+  align-self: flex-end;
+  line-height: 1;
   opacity: 0.85;
-  color: var(--color-primary-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------
+   Week view — 7 columns: day name / coloured block / value
+   ------------------------------------------------------------ */
+.hm-week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+}
+.hm-week-col {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 6px;
+  min-width: 0;
+}
+.hm-week-dow {
+  text-align: center;
+  font-size: 10px;
+  font-family: var(--theme-font-mono, ui-monospace, monospace);
+  font-weight: 500;
+  color: var(--color-muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   line-height: 1;
 }
-
-/* ============================================================
-   Week grid
-   ============================================================ */
-.hm-week-svg {
-  display: block;
+.hm-week-cell {
+  border-radius: var(--radius-md, 6px);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  transition: border-color 100ms, transform 100ms;
+  min-height: 0;
+  animation: hm-reveal 240ms ease-out backwards;
+}
+.hm-week-cell:hover {
+  border-color: var(--color-ring);
+  transform: translateY(-1px);
+}
+.hm-week-cell-today {
+  border-color: var(--color-foreground);
+  border-width: 1.5px;
+  animation: hm-reveal 240ms ease-out backwards, hm-pulse-bg 2.4s ease-in-out 240ms infinite;
+}
+@keyframes hm-pulse-bg {
+  0%, 100% { box-shadow: 0 0 0 0 var(--warm-glow, transparent); }
+  50%      { box-shadow: 0 0 0 3px var(--warm-glow, transparent); }
+}
+.hm-week-val {
+  text-align: center;
+  font-size: 11px;
+  font-family: var(--theme-font-mono, ui-monospace, monospace);
+  font-weight: 600;
+  color: var(--color-foreground);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.hm-week-val-empty {
+  color: var(--color-muted-foreground);
+  opacity: 0.5;
+  font-weight: 400;
 }
 
-/* ============================================================
-   Day bars
-   ============================================================ */
+/* ------------------------------------------------------------
+   Day view — 24 vertical bars filling slot
+   ------------------------------------------------------------ */
+.hm-day-grid {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+}
 .hm-day-bars {
-  display: flex;
-  align-items: flex-end;
+  display: grid;
+  grid-template-columns: repeat(24, 1fr);
   gap: 2px;
-  height: 80px;
-  padding-bottom: 14px; /* reserve space for hour labels */
-  box-sizing: content-box;
+  align-items: end;
+  min-height: 0;
 }
 .hm-day-bar-col {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  flex: 1;
+  align-items: end;
   height: 100%;
-  position: relative;
+  cursor: default;
 }
 .hm-day-bar {
   width: 100%;
   background: var(--color-muted);
-  border-radius: 2px 2px 0 0;
-  min-height: 1px;
-  opacity: 0.35;
-  flex-shrink: 0;
+  border-radius: var(--radius-sm, 4px) var(--radius-sm, 4px) 0 0;
+  min-height: 2px;
+  transition: opacity 100ms;
 }
 .hm-day-bar-active {
   background: var(--color-primary);
-  opacity: 0.85;
+  opacity: 0.9;
 }
-.hm-day-bar-label {
-  font-size: 8px;
+.hm-day-bar-active:hover {
+  opacity: 1;
+}
+.hm-day-axis {
+  display: grid;
+  grid-template-columns: repeat(24, 1fr);
+  gap: 2px;
+  flex-shrink: 0;
+}
+.hm-day-tick {
+  font-size: 9px;
   font-family: var(--theme-font-mono, ui-monospace, monospace);
   color: var(--color-muted-foreground);
+  text-align: center;
   line-height: 1;
-  position: absolute;
-  bottom: -14px;
-  left: 50%;
-  transform: translateX(-50%);
-  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
-/* Compact legend */
-.hm-compact-legend {
+/* ------------------------------------------------------------
+   Footer row — year nav, streak, legend, exports
+   ------------------------------------------------------------ */
+.hm-footer {
   display: flex;
   align-items: center;
-  gap: 3px;
-  margin-top: 8px;
-  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.hm-year-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.hm-year-btn {
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  color: var(--color-foreground);
+  cursor: pointer;
+  font-size: 10px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 120ms, border-color 120ms;
+}
+.hm-year-btn:hover:not(:disabled) {
+  background: var(--color-accent);
+  border-color: var(--color-ring);
+}
+.hm-year-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.hm-year-label {
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--theme-font-mono, ui-monospace, monospace);
+  color: var(--color-foreground);
+  min-width: 4ch;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.hm-year-back {
+  font-size: 10px;
+  padding: 2px 6px;
+  border: none;
+  background: transparent;
+  color: var(--color-primary);
+  cursor: pointer;
+  font-family: var(--theme-font-sans, system-ui, sans-serif);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 500;
+  border-radius: var(--radius-sm, 4px);
+}
+.hm-year-back:hover {
+  background: var(--color-accent);
+}
+
+.hm-streak {
+  font-size: 11px;
+  font-family: var(--theme-font-sans, system-ui, sans-serif);
+  white-space: nowrap;
+  cursor: default;
+}
+
+.hm-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
 }
 .hm-legend-label {
   font-size: 9px;
   font-family: var(--theme-font-sans, system-ui, sans-serif);
   color: var(--color-muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 .hm-legend-swatch {
   width: 10px;
@@ -386,110 +486,125 @@
   border-radius: 2px;
 }
 
-/* ============================================================
+.hm-export-group {
+  display: inline-flex;
+  gap: 4px;
+}
+.hm-export-btn {
+  font-size: 10px;
+  font-family: var(--theme-font-sans, system-ui, sans-serif);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 500;
+  padding: 3px 10px;
+  height: auto;
+}
+
+/* ------------------------------------------------------------
    Tooltip
-   ============================================================ */
+   ------------------------------------------------------------ */
 .hm-tooltip {
   position: fixed;
   z-index: 9999;
   background: var(--color-popover);
   color: var(--color-popover-foreground);
   border: 1px solid var(--color-border);
-  border-radius: 6px;
-  padding: 5px 8px;
+  border-radius: var(--radius-md, 6px);
+  padding: 6px 10px;
   font-size: 11px;
   font-family: var(--theme-font-sans, system-ui, sans-serif);
   pointer-events: none;
   white-space: nowrap;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  line-height: 1.4;
 }
 .hm-tt-date {
   font-weight: 600;
-  margin-bottom: 1px;
+  margin-bottom: 2px;
+  color: var(--color-foreground);
 }
 .hm-tt-val {
   color: var(--color-foreground);
 }
 .hm-tt-meta {
   color: var(--color-muted-foreground);
-  margin-top: 1px;
+  margin-top: 2px;
   font-size: 10px;
+  font-family: var(--theme-font-mono, ui-monospace, monospace);
+  font-variant-numeric: tabular-nums;
 }
 
-/* ============================================================
+/* ------------------------------------------------------------
    Empty / error states
-   ============================================================ */
+   ------------------------------------------------------------ */
 .hm-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 2.5rem 1rem;
+  padding: 2rem 1rem;
   text-align: center;
-  gap: 0.4rem;
+  gap: 0.5rem;
+  height: 180px;
+  box-sizing: border-box;
 }
 .hm-empty-icon {
-  font-size: 2.5rem;
+  font-size: 2rem;
   line-height: 1;
-  opacity: 0.5;
+  opacity: 0.4;
 }
 .hm-empty h3 {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   font-family: var(--theme-font-sans, system-ui, sans-serif);
   color: var(--color-foreground);
   margin: 0;
 }
+.hm-text-muted {
+  color: var(--color-muted-foreground);
+  font-size: 12px;
+  margin: 0;
+  font-family: var(--theme-font-sans, system-ui, sans-serif);
+}
 .hm-error {
   background: color-mix(in srgb, var(--color-destructive) 15%, var(--color-card));
   color: var(--color-destructive);
   border: 1px solid color-mix(in srgb, var(--color-destructive) 40%, transparent);
-  border-radius: 6px;
+  border-radius: var(--radius-md, 6px);
   padding: 8px 12px;
   font-size: 12px;
   font-family: var(--theme-font-sans, system-ui, sans-serif);
 }
-.hm-text-muted {
-  color: var(--color-muted-foreground);
-  font-size: 13px;
-  margin: 0;
-  font-family: var(--theme-font-sans, system-ui, sans-serif);
-}
 
-/* ============================================================
+/* ------------------------------------------------------------
    Loading shimmer
-   ============================================================ */
+   ------------------------------------------------------------ */
 .hm-loading {
   display: block;
+  width: 100%;
+  height: 100%;
 }
 .hm-shimmer-rect {
   fill: var(--color-muted);
   animation: hm-shimmer 1.6s ease-in-out infinite;
 }
-.hm-day-loading {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 1rem 0;
-}
-.hm-shimmer-bar {
-  height: 12px;
+.hm-shimmer-block {
   background: var(--color-muted);
-  border-radius: 4px;
+  border-radius: var(--radius-md, 6px);
   animation: hm-shimmer 1.6s ease-in-out infinite;
 }
 @keyframes hm-shimmer {
   0%, 100% { opacity: 0.3; }
-  50%      { opacity: 0.6; }
+  50%      { opacity: 0.55; }
 }
 
-/* ============================================================
-   Day panel (slide-in)
-   ============================================================ */
+/* ------------------------------------------------------------
+   Day panel (slide-in) — kept from previous design
+   ------------------------------------------------------------ */
 .hm-dp-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.3);
+  background: rgba(0, 0, 0, 0.35);
   z-index: 200;
   animation: hm-fadein 150ms ease-out;
 }
@@ -514,12 +629,11 @@
 .hm-dp-open {
   transform: translateX(0);
 }
-
 .hm-dp-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.875rem 1.25rem;
+  padding: 14px 20px;
   border-bottom: 1px solid var(--color-border);
   position: sticky;
   top: 0;
@@ -549,7 +663,6 @@
 .hm-dp-close:hover {
   background: var(--color-accent);
 }
-
 .hm-dp-loading {
   padding: 2rem;
   text-align: center;
@@ -557,7 +670,6 @@
   font-family: var(--theme-font-sans, system-ui, sans-serif);
   font-size: 13px;
 }
-
 .hm-dp-empty {
   display: flex;
   flex-direction: column;
@@ -571,27 +683,24 @@
   font-family: var(--theme-font-sans, system-ui, sans-serif);
   font-size: 13px;
 }
-
 .hm-dp-body {
-  padding: 0.875rem 1.25rem;
+  padding: 14px 20px;
   display: flex;
   flex-direction: column;
-  gap: 0.875rem;
+  gap: 14px;
 }
-
-/* Day summary stats */
 .hm-dp-stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 0.4rem;
+  gap: 6px;
 }
 .hm-dp-stat {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1px;
-  padding: 6px 2px;
-  border-radius: 6px;
+  gap: 2px;
+  padding: 8px 4px;
+  border-radius: var(--radius-md, 6px);
   background: var(--color-muted);
 }
 .hm-dp-stat-val {
@@ -600,27 +709,25 @@
   font-family: var(--theme-font-mono, ui-monospace, monospace);
   color: var(--color-foreground);
   line-height: 1.1;
+  font-variant-numeric: tabular-nums;
 }
 .hm-dp-stat-lbl {
   font-size: 9px;
   font-family: var(--theme-font-sans, system-ui, sans-serif);
   color: var(--color-muted-foreground);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
+  font-weight: 500;
 }
-
-/* Section titles */
 .hm-dp-section-title {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   font-family: var(--theme-font-sans, system-ui, sans-serif);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.07em;
   color: var(--color-muted-foreground);
   margin: 0;
 }
-
-/* Hour breakdown in day panel */
 .hm-dp-hour-wrap {
   display: flex;
   align-items: flex-end;
@@ -641,9 +748,8 @@
 .hm-dp-hour-bar {
   width: 100%;
   background: var(--color-muted);
-  border-radius: 2px 2px 0 0;
+  border-radius: var(--radius-sm, 4px) var(--radius-sm, 4px) 0 0;
   min-height: 1px;
-  opacity: 0.4;
   flex-shrink: 0;
 }
 .hm-dp-hour-active {
@@ -651,7 +757,7 @@
   opacity: 0.85;
 }
 .hm-dp-hour-label {
-  font-size: 7px;
+  font-size: 8px;
   font-family: var(--theme-font-mono, ui-monospace, monospace);
   color: var(--color-muted-foreground);
   line-height: 1;
@@ -661,8 +767,6 @@
   transform: translateX(-50%);
   white-space: nowrap;
 }
-
-/* Models */
 .hm-dp-models {
   display: flex;
   flex-wrap: wrap;
@@ -677,27 +781,26 @@
   font-family: var(--theme-font-sans, system-ui, sans-serif);
   font-weight: 500;
 }
-
-/* Session list */
 .hm-dp-session-list {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
   max-height: 300px;
   overflow-y: auto;
 }
 .hm-dp-session-card {
-  padding: 7px 10px;
-  border-radius: 6px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md, 6px);
   border: 1px solid var(--color-border);
   cursor: pointer;
-  transition: background 100ms;
+  transition: background 100ms, border-color 100ms;
   display: flex;
   flex-direction: column;
   gap: 3px;
 }
 .hm-dp-session-card:hover {
   background: var(--color-accent);
+  border-color: var(--color-ring);
 }
 .hm-dp-session-title {
   font-size: 12px;
@@ -725,9 +828,9 @@
   font-family: var(--theme-font-mono, ui-monospace, monospace);
 }
 
-/* ============================================================
-   Session viewer (inline in DayPanel)
-   ============================================================ */
+/* ------------------------------------------------------------
+   Session viewer (inline in DayPanel) — kept from previous design
+   ------------------------------------------------------------ */
 .hm-session-viewer {
   display: flex;
   flex-direction: column;
@@ -738,7 +841,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.875rem 1.25rem;
+  padding: 14px 20px;
   border-bottom: 1px solid var(--color-border);
   position: sticky;
   top: 0;
@@ -756,9 +859,9 @@
   margin-right: 0.5rem;
 }
 .hm-sv-back {
-  padding: 2px 8px;
+  padding: 3px 10px;
   border: 1px solid var(--color-border);
-  border-radius: 4px;
+  border-radius: var(--radius-sm, 4px);
   background: transparent;
   color: var(--color-foreground);
   cursor: pointer;
@@ -773,54 +876,49 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  padding: 0.5rem 1.25rem;
+  padding: 8px 20px;
   font-size: 10px;
   font-family: var(--theme-font-sans, system-ui, sans-serif);
   color: var(--color-muted-foreground);
   border-bottom: 1px solid var(--color-border);
 }
 .hm-sv-actions {
-  padding: 0.5rem 1.25rem;
+  padding: 8px 20px;
   border-bottom: 1px solid var(--color-border);
 }
 .hm-sv-chat-btn {
   font-size: 11px;
   font-family: var(--theme-font-sans, system-ui, sans-serif);
 }
-.hm-sv-loading {
-  padding: 2rem;
-  text-align: center;
-  color: var(--color-muted-foreground);
-  font-size: 13px;
-  font-family: var(--theme-font-sans, system-ui, sans-serif);
-}
+.hm-sv-loading,
+.hm-sv-empty,
 .hm-sv-error {
-  padding: 1rem 1.25rem;
-  color: var(--color-destructive);
+  padding: 1.5rem 1.25rem;
+  text-align: center;
   font-size: 12px;
   font-family: var(--theme-font-sans, system-ui, sans-serif);
 }
+.hm-sv-loading,
 .hm-sv-empty {
-  padding: 2rem;
-  text-align: center;
   color: var(--color-muted-foreground);
-  font-size: 13px;
-  font-family: var(--theme-font-sans, system-ui, sans-serif);
+}
+.hm-sv-error {
+  color: var(--color-destructive);
 }
 .hm-sv-messages {
   flex: 1;
   overflow-y: auto;
-  padding: 0.5rem 1.25rem 1.25rem;
+  padding: 8px 20px 20px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 .hm-msg {
-  padding: 6px 10px;
-  border-radius: 4px;
+  padding: 7px 10px;
+  border-radius: var(--radius-md, 6px);
   font-size: 11px;
   font-family: var(--theme-font-sans, system-ui, sans-serif);
-  line-height: 1.4;
+  line-height: 1.45;
 }
 .hm-msg-user {
   background: color-mix(in srgb, var(--color-primary) 12%, transparent);
@@ -838,8 +936,8 @@
   font-size: 9px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 2px;
+  letter-spacing: 0.06em;
+  margin-bottom: 3px;
   opacity: 0.7;
   font-family: var(--theme-font-mono, ui-monospace, monospace);
 }
@@ -849,21 +947,23 @@
   font-family: var(--theme-font-sans, system-ui, sans-serif);
 }
 
-/* ============================================================
+/* ------------------------------------------------------------
    Header strip widget
-   ============================================================ */
+   ------------------------------------------------------------ */
 .hm-header-strip {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
+  gap: 10px;
+  padding: 5px 10px;
   cursor: pointer;
-  border-radius: 6px;
-  transition: background 120ms;
+  border-radius: var(--radius-md, 6px);
+  border: 1px solid transparent;
+  transition: background 120ms, border-color 120ms;
   margin: 2px 0;
 }
 .hm-header-strip:hover {
   background: var(--color-accent);
+  border-color: var(--color-border);
 }
 .hm-hs-label {
   font-size: 11px;
@@ -871,6 +971,8 @@
   font-weight: 500;
   color: var(--color-muted-foreground);
   white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 .hm-hs-svg {
   display: inline-block;
@@ -878,8 +980,9 @@
 }
 .hm-hs-streak {
   font-size: 11px;
-  font-family: var(--theme-font-sans, system-ui, sans-serif);
+  font-family: var(--theme-font-mono, ui-monospace, monospace);
   color: var(--color-foreground);
   white-space: nowrap;
-  font-weight: 500;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }

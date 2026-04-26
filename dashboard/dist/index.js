@@ -32,21 +32,22 @@
   var PERIODS = ["year", "month", "week", "day"];
 
   var DOW_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  var DOW_SHORT = ["M", "T", "W", "T", "F", "S", "S"];
   var SHORT_MONTH = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-  var CELL_GAP = 2;
-  var PADDING_LEFT = 28;
-  var PADDING_TOP = 20;
-  var MIN_CELL = 10;
-  var MAX_CELL = 18;
+  // Standardised slot — every view fits in this fixed-height area
+  var SLOT_HEIGHT = 180;
+
+  // Year-grid SVG geometry
+  var YEAR_GAP = 3;
+  var YEAR_PAD_LEFT = 22;
+  var YEAR_PAD_TOP = 14;
+  var YEAR_MIN_CELL = 8;
+  var YEAR_MAX_CELL = 22;
 
   function todayISO() {
     var d = new Date();
     return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
-  }
-
-  function monthStart(anchor) {
-    return anchor.slice(0, 7) + "-01";
   }
 
   function metricFmt(key, v) {
@@ -54,6 +55,13 @@
       if (METRICS[i].key === key) return METRICS[i].format(v);
     }
     return String(v);
+  }
+
+  function metricLabel(key) {
+    for (var i = 0; i < METRICS.length; i++) {
+      if (METRICS[i].key === key) return METRICS[i].label;
+    }
+    return key;
   }
 
   function cellFill(value, buckets) {
@@ -83,16 +91,19 @@
   }
 
   // -------------------------------------------------------------------------
-  // Responsive cell size hook — returns { cellSize, ref }
-  // ref is a callback ref that attaches ResizeObserver on mount
+  // Year cell-size hook — picks the smaller of width-driven and height-driven,
+  // so the SVG always fits the 180px slot AND the available width.
   // -------------------------------------------------------------------------
 
-  function useCellSize(cols) {
+  function useYearCellSize() {
     var _useState = useState(14);
     var size = _useState[0];
     var setSize = _useState[1];
 
     var roRef = useRef(null);
+    var COLS = 53;
+    var ROWS = 7;
+    var heightCellMax = Math.floor((SLOT_HEIGHT - YEAR_PAD_TOP - (ROWS - 1) * YEAR_GAP) / ROWS);
 
     var callbackRef = useCallback(function (el) {
       if (roRef.current) {
@@ -101,16 +112,17 @@
       }
       if (!el) return;
       function measure(w) {
-        var avail = w - PADDING_LEFT - 16;
-        var s = Math.floor((avail - CELL_GAP * (cols - 1)) / cols);
-        setSize(Math.max(MIN_CELL, Math.min(MAX_CELL, s)));
+        var avail = w - YEAR_PAD_LEFT - 4;
+        var widthCell = Math.floor((avail - YEAR_GAP * (COLS - 1)) / COLS);
+        var s = Math.min(widthCell, heightCellMax, YEAR_MAX_CELL);
+        setSize(Math.max(YEAR_MIN_CELL, s));
       }
       measure(el.getBoundingClientRect().width);
       roRef.current = new ResizeObserver(function (entries) {
         measure(entries[0].contentRect.width);
       });
       roRef.current.observe(el);
-    }, [cols]);
+    }, [heightCellMax]);
 
     useEffect(function () {
       return function () {
@@ -131,14 +143,13 @@
     var onCellClick = props.onCellClick;
     var onCellHover = props.onCellHover;
     var onCellUnhover = props.onCellUnhover;
-    var metric = props.metric;
     var cellSize = props.cellSize;
 
     var today = todayISO();
-    var pitch = cellSize + CELL_GAP;
+    var pitch = cellSize + YEAR_GAP;
     var cols = 53;
-    var svgWidth = PADDING_LEFT + cols * pitch;
-    var svgHeight = PADDING_TOP + 7 * pitch + cellSize + 4;
+    var svgWidth = YEAR_PAD_LEFT + cols * pitch;
+    var svgHeight = YEAR_PAD_TOP + 7 * pitch;
 
     var monthLabels = useMemo(function () {
       var labels = [];
@@ -147,7 +158,7 @@
         if (i % 7 !== 0) continue;
         var m = new Date(cells[i].date + "T12:00:00").getMonth();
         if (m !== lastMonth) {
-          labels.push({ x: PADDING_LEFT + (i / 7) * pitch, text: SHORT_MONTH[m] });
+          labels.push({ x: YEAR_PAD_LEFT + (i / 7) * pitch, text: SHORT_MONTH[m] });
           lastMonth = m;
         }
       }
@@ -157,15 +168,15 @@
     function pos(idx) {
       var col = Math.floor(idx / 7);
       var row = idx % 7;
-      return { x: PADDING_LEFT + col * pitch, y: PADDING_TOP + row * pitch };
+      return { x: YEAR_PAD_LEFT + col * pitch, y: YEAR_PAD_TOP + row * pitch };
     }
 
     var dayLabels = useMemo(function () {
       return [0, 2, 4].map(function (row) {
         return React.createElement("text", {
           key: row,
-          x: PADDING_LEFT - 4,
-          y: PADDING_TOP + row * pitch + cellSize - 2,
+          x: YEAR_PAD_LEFT - 4,
+          y: YEAR_PAD_TOP + row * pitch + cellSize - 1,
           textAnchor: "end",
           className: "hm-text-meta",
         }, DOW_LABELS[row].slice(0, 1));
@@ -174,7 +185,7 @@
 
     var monthLabelEls = useMemo(function () {
       return monthLabels.map(function (l, i) {
-        return React.createElement("text", { key: i, x: l.x, y: 13, className: "hm-text-meta" }, l.text);
+        return React.createElement("text", { key: i, x: l.x, y: 10, className: "hm-text-meta" }, l.text);
       });
     }, [monthLabels]);
 
@@ -189,7 +200,7 @@
           width: cellSize, height: cellSize, rx: 2,
           fill: cellFill(cell.value, buckets),
           className: "hm-cell" + (isToday ? " hm-cell-today" : ""),
-          style: { animationDelay: col * 8 + "ms", cursor: "pointer" },
+          style: { animationDelay: col * 6 + "ms", cursor: "pointer" },
           onClick: function () { onCellClick(cell.date); },
           onMouseEnter: function (e) { onCellHover && onCellHover(cell, e); },
           onMouseMove: function (e) { onCellHover && onCellHover(cell, e); },
@@ -198,34 +209,15 @@
       });
     }, [cells, buckets, cellSize, today, onCellClick, onCellHover, onCellUnhover]);
 
-    var legend = useMemo(function () {
-      var fills = [0, 1, 2, 3, 4].map(function (i) {
-        return i === 0 ? "var(--color-muted)" : "color-mix(in srgb, var(--color-primary) " + (i * 25) + "%, var(--color-card))";
-      });
-      var startX = svgWidth - 5 * (cellSize + 2) - 50;
-      return React.createElement(React.Fragment, null,
-        React.createElement("text", { x: startX - 2, y: svgHeight - 2, className: "hm-text-legend" }, "Less"),
-        fills.map(function (fill, i) {
-          return React.createElement("rect", {
-            key: i,
-            x: startX + i * (cellSize + 2), y: svgHeight - 2 - cellSize,
-            width: cellSize, height: cellSize, rx: 2, fill: fill,
-          });
-        }),
-        React.createElement("text", { x: startX + 5 * (cellSize + 2) + 2, y: svgHeight - 2, className: "hm-text-legend" }, "More"),
-      );
-    }, [svgWidth, svgHeight, cellSize]);
-
-    return React.createElement("svg", { className: "hm-svg", width: svgWidth, height: svgHeight },
-        dayLabels,
-        monthLabelEls,
-        rects,
-        legend,
-      );
+    return React.createElement("svg", { className: "hm-svg", width: svgWidth, height: svgHeight, viewBox: "0 0 " + svgWidth + " " + svgHeight },
+      dayLabels,
+      monthLabelEls,
+      rects,
+    );
   }
 
   // -------------------------------------------------------------------------
-  // Month grid (calendar grid)
+  // Month grid — true calendar, fills the 180px slot
   // -------------------------------------------------------------------------
 
   function MonthGrid(props) {
@@ -239,33 +231,42 @@
     var today = todayISO();
 
     var grid = useMemo(function () {
-      if (!cells || cells.length === 0) return { weeks: [], dayLabels: DOW_LABELS };
+      if (!cells || cells.length === 0) return { weeks: [] };
       var firstDate = new Date(cells[0].date + "T12:00:00");
       var firstDow = (firstDate.getDay() + 6) % 7;
       var slots = [];
       for (var i = 0; i < firstDow; i++) slots.push(null);
       for (var i = 0; i < cells.length; i++) slots.push(cells[i]);
+      while (slots.length % 7 !== 0) slots.push(null);
       var weeks = [];
       for (var i = 0; i < slots.length; i += 7) weeks.push(slots.slice(i, i + 7));
-      return { weeks: weeks, dayLabels: DOW_LABELS };
+      return { weeks: weeks };
     }, [cells]);
 
     return React.createElement("div", { className: "hm-month-grid" },
       React.createElement("div", { className: "hm-month-header" },
-        grid.dayLabels.map(function (d) {
-          return React.createElement("div", { key: d, className: "hm-month-dow" }, d);
+        DOW_LABELS.map(function (d) {
+          return React.createElement("div", { key: d, className: "hm-month-dow" }, d.slice(0, 3));
         }),
       ),
-      grid.weeks.map(function (week, wi) {
-        return React.createElement("div", { key: wi, className: "hm-month-week" },
-          week.map(function (cell, di) {
-            if (!cell) return React.createElement("div", { key: di, className: "hm-month-cell hm-month-cell-empty" });
+      React.createElement("div", { className: "hm-month-body" },
+        grid.weeks.map(function (week, wi) {
+          return week.map(function (cell, di) {
+            if (!cell) {
+              return React.createElement("div", {
+                key: wi + "-" + di,
+                className: "hm-month-cell hm-month-cell-empty",
+              });
+            }
             var isToday = cell.date === today;
             var dayNum = new Date(cell.date + "T12:00:00").getDate();
             return React.createElement("div", {
               key: cell.date,
               className: "hm-month-cell" + (isToday ? " hm-month-cell-today" : ""),
-              style: { background: cellFill(cell.value, buckets) },
+              style: {
+                background: cellFill(cell.value, buckets),
+                animationDelay: (wi * 30) + "ms",
+              },
               onClick: function () { onCellClick(cell.date); },
               onMouseEnter: function (e) { onCellHover && onCellHover(cell, e); },
               onMouseLeave: function () { onCellUnhover && onCellUnhover(); },
@@ -273,14 +274,14 @@
               React.createElement("span", { className: "hm-month-daynum" }, dayNum),
               cell.value > 0 && React.createElement("span", { className: "hm-month-val" }, metricFmt(metric, cell.value)),
             );
-          }),
-        );
-      }),
+          });
+        }),
+      ),
     );
   }
 
   // -------------------------------------------------------------------------
-  // Week strip (7-day horizontal)
+  // Week grid — 7 columns: dow / coloured block / value, fills slot
   // -------------------------------------------------------------------------
 
   function WeekGrid(props) {
@@ -290,59 +291,43 @@
     var onCellHover = props.onCellHover;
     var onCellUnhover = props.onCellUnhover;
     var metric = props.metric;
-    var cellSize = props.cellSize;
 
     var today = todayISO();
-    var pitch = cellSize + CELL_GAP;
+    if (!cells) return null;
 
-    var rects = useMemo(function () {
-      if (!cells) return null;
-      return cells.map(function (cell, i) {
-        var isToday = cell.date === today;
-        return React.createElement("rect", {
-          key: cell.date,
-          x: i * pitch, y: 0,
-          width: cellSize, height: cellSize, rx: 2,
-          fill: cellFill(cell.value, buckets),
-          className: "hm-cell" + (isToday ? " hm-cell-today" : ""),
-          style: { cursor: "pointer" },
-          onClick: function () { onCellClick(cell.date); },
-          onMouseEnter: function (e) { onCellHover && onCellHover(cell, e); },
-          onMouseMove: function (e) { onCellHover && onCellHover(cell, e); },
-          onMouseLeave: function () { onCellUnhover && onCellUnhover(); },
-        });
-      });
-    }, [cells, buckets, cellSize, pitch, today, onCellClick, onCellHover, onCellUnhover]);
-
-    var labels = useMemo(function () {
-      if (!cells) return null;
-      return cells.map(function (cell, i) {
+    return React.createElement("div", { className: "hm-week-grid" },
+      cells.map(function (cell, i) {
         var d = new Date(cell.date + "T12:00:00");
-        return React.createElement("text", {
-          key: cell.date,
-          x: i * pitch + cellSize / 2, y: cellSize + 12,
-          textAnchor: "middle",
-          className: "hm-text-meta",
-          style: { fontSize: 8 },
-        }, d.toLocaleDateString(undefined, { weekday: "short" }).slice(0, 2));
-      });
-    }, [cells, cellSize, pitch]);
-
-    return React.createElement("svg", {
-      className: "hm-week-svg",
-      width: cells ? cells.length * pitch : 100,
-      height: cellSize + 16,
-    }, rects, labels);
+        var dow = d.toLocaleDateString(undefined, { weekday: "short" });
+        var isToday = cell.date === today;
+        var hasValue = cell.value > 0;
+        return React.createElement("div", { key: cell.date, className: "hm-week-col" },
+          React.createElement("div", { className: "hm-week-dow" }, dow),
+          React.createElement("div", {
+            className: "hm-week-cell" + (isToday ? " hm-week-cell-today" : ""),
+            style: {
+              background: cellFill(cell.value, buckets),
+              animationDelay: (i * 40) + "ms",
+            },
+            onClick: function () { onCellClick(cell.date); },
+            onMouseEnter: function (e) { onCellHover && onCellHover(cell, e); },
+            onMouseMove: function (e) { onCellHover && onCellHover(cell, e); },
+            onMouseLeave: function () { onCellUnhover && onCellUnhover(); },
+          }),
+          React.createElement("div", {
+            className: "hm-week-val" + (hasValue ? "" : " hm-week-val-empty"),
+          }, hasValue ? metricFmt(metric, cell.value) : "·"),
+        );
+      }),
+    );
   }
 
   // -------------------------------------------------------------------------
-  // Day bars (24-hour)
+  // Day bars — 24 vertical bars filling the slot
   // -------------------------------------------------------------------------
 
   function DayBars(props) {
     var cells = props.cells;
-    var onCellClick = props.onCellClick;
-    var cellSize = props.cellSize;
 
     var maxVal = 1;
     if (cells) {
@@ -353,33 +338,38 @@
 
     if (!cells) return null;
 
-    return React.createElement("div", { className: "hm-day-bars" },
-      cells.map(function (c) {
-        var h = c.value > 0 ? Math.round((c.value / maxVal) * 80) : 1;
-        var isActive = c.value > 0;
-        return React.createElement("div", { key: c.hour, className: "hm-day-bar-col", title: c.hour + ":00  - " + c.value + " sessions" },
-          React.createElement("div", {
-            className: "hm-day-bar" + (isActive ? " hm-day-bar-active" : ""),
-            style: { height: h + "px" },
-          }),
-          React.createElement("span", { className: "hm-day-bar-label" },
-            c.hour === 0 ? "0" : c.hour === 12 ? "12" : c.hour % 6 === 0 ? String(c.hour) : ""
-          ),
-        );
-      }),
+    return React.createElement("div", { className: "hm-day-grid" },
+      React.createElement("div", { className: "hm-day-bars" },
+        cells.map(function (c) {
+          var pct = c.value > 0 ? Math.max(2, Math.round((c.value / maxVal) * 100)) : 1;
+          var isActive = c.value > 0;
+          return React.createElement("div", { key: c.hour, className: "hm-day-bar-col", title: c.hour + ":00 — " + c.value + " sessions" },
+            React.createElement("div", {
+              className: "hm-day-bar" + (isActive ? " hm-day-bar-active" : ""),
+              style: { height: pct + "%" },
+            }),
+          );
+        }),
+      ),
+      React.createElement("div", { className: "hm-day-axis" },
+        Array.from({ length: 24 }).map(function (_, h) {
+          return React.createElement("div", { key: h, className: "hm-day-tick" },
+            h % 6 === 0 ? String(h) : "",
+          );
+        }),
+      ),
     );
   }
 
   // -------------------------------------------------------------------------
-  // Legend (for week/day views — compact)
+  // Legend — used in footer for all views
   // -------------------------------------------------------------------------
 
-  function CompactLegend(props) {
-    var buckets = props.buckets;
+  function LegendBar() {
     var fills = [0, 1, 2, 3, 4].map(function (i) {
       return i === 0 ? "var(--color-muted)" : "color-mix(in srgb, var(--color-primary) " + (i * 25) + "%, var(--color-card))";
     });
-    return React.createElement("div", { className: "hm-compact-legend" },
+    return React.createElement("div", { className: "hm-legend" },
       React.createElement("span", { className: "hm-legend-label" }, "Less"),
       fills.map(function (fill, i) {
         return React.createElement("div", { key: i, className: "hm-legend-swatch", style: { background: fill } });
@@ -389,7 +379,7 @@
   }
 
   // -------------------------------------------------------------------------
-  // Summary row
+  // Summary row — same shape, refined styling lives in CSS
   // -------------------------------------------------------------------------
 
   function SummaryRow(props) {
@@ -431,16 +421,33 @@
     if (cur.length > 0) {
       label = cur.length + "-day streak";
       if (cur.length >= best.length) {
-        label += cur.length === best.length ? " (tied for best)" : " (new record)";
+        label += cur.length === best.length ? " (tied)" : " (record)";
       }
       title = best.length > 0 && best.started
-        ? "Best: " + best.length + " days (" + best.started + "  - " + (best.ended || "ongoing") + ")"
+        ? "Best: " + best.length + " days (" + best.started + " — " + (best.ended || "ongoing") + ")"
         : "";
     } else {
       label = "No streak";
       title = "Start a session today to begin a new streak";
     }
     return React.createElement(Badge, { variant: "secondary", className: "hm-streak", title: title }, label);
+  }
+
+  // -------------------------------------------------------------------------
+  // Metric selector
+  // -------------------------------------------------------------------------
+
+  function MetricSelect(props) {
+    var value = props.value;
+    var onChange = props.onChange;
+    var opts = METRICS.map(function (m) {
+      return React.createElement(SelectOption, { key: m.key, value: m.key }, m.label);
+    });
+    return React.createElement(Select, {
+      value: value,
+      onValueChange: onChange,
+      className: "hm-metric-select",
+    }, opts);
   }
 
   // -------------------------------------------------------------------------
@@ -461,13 +468,11 @@
       ));
     }
 
-    return React.createElement("div", { className: "hm-platform-filter" },
-      React.createElement(Select, {
-        value: value || "all",
-        onValueChange: onChange,
-        className: "hm-platform-select",
-      }, opts),
-    );
+    return React.createElement(Select, {
+      value: value || "all",
+      onValueChange: onChange,
+      className: "hm-platform-select",
+    }, opts);
   }
 
   // -------------------------------------------------------------------------
@@ -590,7 +595,7 @@
       React.createElement("div", { className: "hm-dp hm-dp-open" },
         React.createElement("div", { className: "hm-dp-header" },
           React.createElement("span", { className: "hm-dp-title" }, formatLongDate(date)),
-          React.createElement("button", { className: "hm-dp-close", onClick: onClose }, "\u00D7"),
+          React.createElement("button", { className: "hm-dp-close", onClick: onClose }, "×"),
         ),
 
         loading && React.createElement("div", { className: "hm-dp-loading" }, "Loading..."),
@@ -639,7 +644,7 @@
               React.createElement("div", { className: "hm-dp-models" },
                 data.models_used.map(function (m) {
                   return React.createElement("span", { key: m.name, className: "hm-dp-model-chip" },
-                    m.name + " \u00D7" + m.sessions
+                    m.name + " ×" + m.sessions
                   );
                 }),
               ),
@@ -686,13 +691,13 @@
         cell.sessions + " session" + (cell.sessions !== 1 ? "s" : ""),
       ),
       (cell.tokens > 0 || cell.cost > 0) && React.createElement("div", { className: "hm-tt-meta" },
-        metricFmt("tokens", cell.tokens) + " tokens  \u00B7 $" + Number(cell.cost || 0).toFixed(3),
+        metricFmt("tokens", cell.tokens) + " tokens · $" + Number(cell.cost || 0).toFixed(3),
       ),
     );
   }
 
   // -------------------------------------------------------------------------
-  // Header bar
+  // Header bar — single row: title + metric, period segmented control on right
   // -------------------------------------------------------------------------
 
   function HeaderBar(props) {
@@ -701,13 +706,50 @@
     var period = props.period;
     var setPeriod = props.setPeriod;
     var anchor = props.anchor;
-    var setAnchor = props.setAnchor;
-    var streaks = props.streaks;
     var platforms = props.platforms;
     var platformVal = props.platformVal;
     var setPlatformVal = props.setPlatformVal;
+
+    var anchorYear = new Date(anchor + "T12:00:00").getFullYear();
+
+    return React.createElement("div", { className: "hm-header" },
+      React.createElement("div", { className: "hm-title-block" },
+        React.createElement("div", { className: "hm-title" },
+          "Activity",
+          React.createElement(MetricSelect, { value: metric, onChange: setMetric }),
+        ),
+        React.createElement("div", { className: "hm-title-meta" },
+          String(anchorYear) + " · click any cell for details",
+        ),
+      ),
+
+      React.createElement("div", { style: { display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" } },
+        React.createElement(PlatformFilter, { platforms: platforms, value: platformVal, onChange: setPlatformVal }),
+
+        React.createElement("div", { className: "hm-period-group" },
+          PERIODS.map(function (p) {
+            return React.createElement("button", {
+              key: p,
+              className: "hm-period-btn" + (period === p ? " hm-active" : ""),
+              onClick: function () { setPeriod(p); },
+            }, p.charAt(0).toUpperCase() + p.slice(1));
+          }),
+        ),
+      ),
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // Footer bar — year nav, streak, legend, exports
+  // -------------------------------------------------------------------------
+
+  function FooterBar(props) {
+    var anchor = props.anchor;
+    var setAnchor = props.setAnchor;
+    var streaks = props.streaks;
     var onExportCSV = props.onExportCSV;
     var onExportPNG = props.onExportPNG;
+    var period = props.period;
 
     var today = todayISO();
     var anchorYear = new Date(anchor + "T12:00:00").getFullYear();
@@ -721,110 +763,69 @@
       setAnchor(nd > today ? today : nd);
     }
 
-    return React.createElement("div", { className: "hm-header" },
-      React.createElement("div", { className: "hm-header-row" },
-        React.createElement("div", { className: "hm-period-group" },
-          PERIODS.map(function (p) {
-            return React.createElement("button", {
-              key: p,
-              className: "hm-period-btn" + (period === p ? " hm-active" : ""),
-              onClick: function () { setPeriod(p); },
-            }, p.charAt(0).toUpperCase() + p.slice(1));
-          }),
-        ),
-
-        React.createElement("div", { className: "hm-metric-group" },
-          METRICS.map(function (m) {
-            return React.createElement("button", {
-              key: m.key,
-              className: "hm-metric-btn" + (metric === m.key ? " hm-active" : ""),
-              onClick: function () { setMetric(m.key); },
-            }, m.label);
-          }),
-        ),
-
-        React.createElement(PlatformFilter, { platforms: platforms, value: platformVal, onChange: setPlatformVal }),
+    return React.createElement("div", { className: "hm-footer" },
+      React.createElement("div", { className: "hm-year-nav" },
+        React.createElement("button", {
+          className: "hm-year-btn",
+          onClick: function () { shiftYear(-1); },
+          "aria-label": "Previous year",
+        }, "◀"),
+        React.createElement("span", { className: "hm-year-label" }, String(anchorYear)),
+        React.createElement("button", {
+          className: "hm-year-btn",
+          onClick: function () { shiftYear(1); },
+          disabled: isThisYear,
+          "aria-label": "Next year",
+        }, "▶"),
+        !isThisYear && React.createElement("button", {
+          className: "hm-year-back",
+          onClick: function () { setAnchor(today); },
+        }, "Today"),
       ),
 
-      React.createElement("div", { className: "hm-header-row hm-header-nav" },
-        React.createElement("div", { className: "hm-year-nav" },
-          React.createElement("button", {
-            className: "hm-year-btn",
-            onClick: function () { shiftYear(-1); },
-          }, "◀"),
-          React.createElement("span", { className: "hm-year-label" }, String(anchorYear)),
-          React.createElement("button", {
-            className: "hm-year-btn",
-            onClick: function () { shiftYear(1); },
-            disabled: isThisYear,
-          }, "▶"),
-          !isThisYear && React.createElement("button", {
-            className: "hm-year-back",
-            onClick: function () { setAnchor(today); },
-          }, "Back to today"),
-        ),
+      React.createElement(StreakBadge, { streaks: streaks }),
 
-        React.createElement("span", { style: { fontSize: "2rem", fontWeight: 700 } }, "test"),
+      React.createElement(LegendBar, null),
 
-        React.createElement(StreakBadge, { streaks: streaks }),
-
-        React.createElement("div", { className: "hm-header-spacer" }),
-
-        React.createElement("div", { className: "hm-export-group" },
-          React.createElement(Button, { variant: "outline", size: "sm", className: "hm-export-btn", onClick: onExportCSV }, "CSV"),
-          React.createElement(Button, { variant: "outline", size: "sm", className: "hm-export-btn", onClick: onExportPNG }, "PNG"),
-        ),
+      React.createElement("div", { className: "hm-export-group" },
+        React.createElement(Button, { variant: "outline", size: "sm", className: "hm-export-btn", onClick: onExportCSV }, "CSV"),
+        period === "year" && React.createElement(Button, { variant: "outline", size: "sm", className: "hm-export-btn", onClick: onExportPNG }, "PNG"),
       ),
     );
   }
 
   // -------------------------------------------------------------------------
-  // Loading skeleton
+  // Loading skeleton — fills the slot
   // -------------------------------------------------------------------------
 
   function LoadingSkeleton(props) {
-    var cellSize = props.cellSize || 14;
     var period = props.period;
-    var pitch = cellSize + CELL_GAP;
 
-    if (period === "day") {
-      return React.createElement("div", { className: "hm-loading hm-day-loading" },
-        React.createElement("div", { className: "hm-shimmer-bar" }),
-        React.createElement("div", { className: "hm-shimmer-bar", style: { width: "60%" } }),
-        React.createElement("div", { className: "hm-shimmer-bar", style: { width: "80%" } }),
-      );
-    }
-
-    if (period === "week") {
-      return React.createElement("svg", { width: 7 * pitch, height: cellSize + 16, className: "hm-loading" },
-        Array.from({ length: 7 }).map(function (_, i) {
-          return React.createElement("rect", {
+    if (period === "day" || period === "week") {
+      return React.createElement("div", { className: "hm-loading", style: { display: "grid", gridTemplateColumns: period === "day" ? "repeat(24, 1fr)" : "repeat(7, 1fr)", gap: period === "day" ? 2 : 8, alignItems: "end" } },
+        Array.from({ length: period === "day" ? 24 : 7 }).map(function (_, i) {
+          var h = 30 + ((i * 17) % 60);
+          return React.createElement("div", {
             key: i,
-            x: i * pitch, y: 0,
-            width: cellSize, height: cellSize, rx: 2,
-            className: "hm-shimmer-rect",
+            className: "hm-shimmer-block",
+            style: { height: h + "%", borderRadius: 4 },
           });
         }),
       );
     }
 
-    var cols = period === "year" ? 53 : 7;
-    var rows = period === "year" ? 7 : 6;
-    return React.createElement("svg", {
-      width: PADDING_LEFT + cols * pitch,
-      height: PADDING_TOP + rows * pitch,
-      className: "hm-loading",
-    },
-      Array.from({ length: cols }).flatMap(function (_, col) {
-        return Array.from({ length: rows }).map(function (_, row) {
-          return React.createElement("rect", {
-            key: col + "-" + row,
-            x: PADDING_LEFT + col * pitch,
-            y: PADDING_TOP + row * pitch,
-            width: cellSize, height: cellSize, rx: 2,
-            className: "hm-shimmer-rect",
-          });
-        });
+    if (period === "month") {
+      return React.createElement("div", { className: "hm-loading", style: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gridAutoRows: "1fr", gap: 4, height: "100%" } },
+        Array.from({ length: 35 }).map(function (_, i) {
+          return React.createElement("div", { key: i, className: "hm-shimmer-block" });
+        }),
+      );
+    }
+
+    // year
+    return React.createElement("div", { className: "hm-loading", style: { display: "grid", gridTemplateColumns: "repeat(53, 1fr)", gridAutoRows: "1fr", gap: 3, height: "100%", padding: "10px 0" } },
+      Array.from({ length: 53 * 7 }).map(function (_, i) {
+        return React.createElement("div", { key: i, className: "hm-shimmer-block", style: { borderRadius: 2 } });
       }),
     );
   }
@@ -835,7 +836,7 @@
 
   function EmptyState() {
     return React.createElement("div", { className: "hm-empty" },
-      React.createElement("div", { className: "hm-empty-icon" }, "\uD83D\uDCCA"),
+      React.createElement("div", { className: "hm-empty-icon" }, "📊"),
       React.createElement("h3", null, "No activity yet"),
       React.createElement("p", { className: "hm-text-muted" },
         "Once you start using Hermes, your sessions will appear here as a heatmap."
@@ -844,34 +845,13 @@
   }
 
   // -------------------------------------------------------------------------
-  // Grid selector
+  // Grid slot — fixed-height container for any view
   // -------------------------------------------------------------------------
 
-  function HeatmapGrid(props) {
-    var data = props.data;
-    var period = props.period;
-    var onCellClick = props.onCellClick;
-    var onCellHover = props.onCellHover;
-    var onCellUnhover = props.onCellUnhover;
-    var metric = props.metric;
-    var cellSize = props.cellSize;
-    var containerRef = props.containerRef;
-
-    if (!data || !data.cells || data.cells.length === 0) return null;
-
-    var cells = data.cells;
-    var buckets = data.buckets;
-
-    if (period === "year") {
-      return React.createElement(YearGrid, { cells: cells, buckets: buckets, onCellClick: onCellClick, onCellHover: onCellHover, onCellUnhover: onCellUnhover, metric: metric, cellSize: cellSize, containerRef: containerRef });
-    }
-    if (period === "month") {
-      return React.createElement(MonthGrid, { cells: cells, buckets: buckets, onCellClick: onCellClick, onCellHover: onCellHover, onCellUnhover: onCellUnhover, metric: metric, cellSize: cellSize });
-    }
-    if (period === "week") {
-      return React.createElement(WeekGrid, { cells: cells, buckets: buckets, onCellClick: onCellClick, onCellHover: onCellHover, onCellUnhover: onCellUnhover, metric: metric, cellSize: cellSize });
-    }
-    return null;
+  function GridSlot(props) {
+    return React.createElement("div", { className: "hm-grid-slot", ref: props.containerRef },
+      React.createElement("div", { className: "hm-grid-slot-inner" }, props.children),
+    );
   }
 
   // -------------------------------------------------------------------------
@@ -914,10 +894,9 @@
     var tooltip = _useState18[0];
     var setTooltip = _useState18[1];
 
-    var cols = period === "year" ? 53 : period === "month" ? 7 : period === "week" ? 7 : 24;
-    var _useCellSize = useCellSize(cols);
-    var cellSize = _useCellSize.cellSize;
-    var gridRef = _useCellSize.ref;
+    var _useYearCellSize = useYearCellSize();
+    var yearCellSize = _useYearCellSize.cellSize;
+    var yearGridRef = _useYearCellSize.ref;
 
     var tooltipTimeout = useRef(null);
 
@@ -953,15 +932,11 @@
 
     var hasNoData = !loading && data && data.total === 0 && data.active_days === 0;
 
-    function onCellClick(date) {
-      setSelectedDate(date);
-    }
-
+    function onCellClick(date) { setSelectedDate(date); }
     function onCellHover(cell, e) {
       if (tooltipTimeout.current) { clearTimeout(tooltipTimeout.current); tooltipTimeout.current = null; }
       setTooltip({ cell: cell, x: e.clientX, y: e.clientY });
     }
-
     function onCellUnhover() {
       tooltipTimeout.current = setTimeout(function () { setTooltip(null); }, 80);
     }
@@ -979,7 +954,7 @@
       document.body.removeChild(a);
     }
 
-    // Export PNG
+    // Export PNG (year view only — the SVG is the year grid)
     function onExportPNG() {
       var svg = document.querySelector(".hm-svg");
       if (!svg) return;
@@ -1009,47 +984,64 @@
       img.src = url;
     }
 
-    var cells = data ? data.cells : [];
-    var buckets = data ? data.buckets : [0, 1, 2, 3, 4];
+    function renderView() {
+      if (loading) return React.createElement(LoadingSkeleton, { period: period });
+      if (hasNoData) return React.createElement(EmptyState, null);
+      if (!data || !data.cells || data.cells.length === 0) return null;
+
+      var cells = data.cells;
+      var buckets = data.buckets;
+
+      if (period === "year") {
+        return React.createElement("div", { className: "hm-year-wrap" },
+          React.createElement(YearGrid, {
+            cells: cells, buckets: buckets, cellSize: yearCellSize,
+            onCellClick: onCellClick, onCellHover: onCellHover, onCellUnhover: onCellUnhover,
+          }),
+        );
+      }
+      if (period === "month") {
+        return React.createElement(MonthGrid, {
+          cells: cells, buckets: buckets, metric: metric,
+          onCellClick: onCellClick, onCellHover: onCellHover, onCellUnhover: onCellUnhover,
+        });
+      }
+      if (period === "week") {
+        return React.createElement(WeekGrid, {
+          cells: cells, buckets: buckets, metric: metric,
+          onCellClick: onCellClick, onCellHover: onCellHover, onCellUnhover: onCellUnhover,
+        });
+      }
+      if (period === "day") {
+        return React.createElement(DayBars, { cells: cells });
+      }
+      return null;
+    }
 
     return React.createElement(Card, { className: "hm-card" },
       React.createElement(CardContent, { className: "hm-card-content" },
         React.createElement(HeaderBar, {
           metric: metric, setMetric: setMetric,
           period: period, setPeriod: setPeriod,
-          anchor: anchor, setAnchor: setAnchor,
-          streaks: streaks,
+          anchor: anchor,
           platforms: platforms,
           platformVal: platformVal, setPlatformVal: setPlatformVal,
-          onExportCSV: onExportCSV, onExportPNG: onExportPNG,
         }),
 
         React.createElement(SummaryRow, { data: data, metric: metric }),
 
         error && React.createElement("div", { className: "hm-error" }, "Failed to load data: " + error),
 
-        loading && React.createElement(LoadingSkeleton, { cellSize: cellSize, period: period }),
-
-        hasNoData && React.createElement(EmptyState, null),
-
-        !loading && !hasNoData && data && data.cells && data.cells.length > 0 && (
-          period === "day"
-            ? React.createElement("div", { ref: gridRef, className: "hm-grid-wrap" },
-                React.createElement(DayBars, { cells: data.cells, cellSize: cellSize }),
-                React.createElement(CompactLegend, { buckets: buckets }),
-              )
-            : React.createElement("div", { ref: gridRef, className: "hm-grid-wrap" },
-                React.createElement(HeatmapGrid, {
-                  data: data,
-                  period: period,
-                  onCellClick: onCellClick,
-                  onCellHover: onCellHover,
-                  onCellUnhover: onCellUnhover,
-                  metric: metric,
-                  cellSize: cellSize,
-                }),
-              )
+        React.createElement(GridSlot, { containerRef: period === "year" ? yearGridRef : null },
+          renderView(),
         ),
+
+        React.createElement(FooterBar, {
+          anchor: anchor, setAnchor: setAnchor,
+          streaks: streaks,
+          onExportCSV: onExportCSV, onExportPNG: onExportPNG,
+          period: period,
+        }),
 
         tooltip && React.createElement(HeatmapTooltip, {
           cell: tooltip.cell,
@@ -1082,7 +1074,7 @@
 
     if (!data) return null;
 
-    var STRIP_CELL = 8;
+    var STRIP_CELL = 9;
     var STRIP_GAP = 2;
     var STRIP_PITCH = STRIP_CELL + STRIP_GAP;
 
@@ -1097,20 +1089,20 @@
       React.createElement("span", { className: "hm-hs-label" }, "Activity"),
       React.createElement("svg", {
         width: data.cells.length * STRIP_PITCH,
-        height: STRIP_CELL + 4,
+        height: STRIP_CELL + 2,
         className: "hm-hs-svg",
       },
         data.cells.map(function (c, i) {
           return React.createElement("rect", {
             key: c.date,
-            x: i * STRIP_PITCH, y: 2,
-            width: STRIP_CELL, height: STRIP_CELL, rx: 1,
+            x: i * STRIP_PITCH, y: 1,
+            width: STRIP_CELL, height: STRIP_CELL, rx: 2,
             fill: cellFill(c.value, data.buckets),
           });
         }),
       ),
       data.current_streak > 0 && React.createElement("span", { className: "hm-hs-streak" },
-        data.current_streak + "d streak"
+        data.current_streak + "d"
       ),
     );
   }

@@ -711,6 +711,7 @@
     var setPlatformVal = props.setPlatformVal;
 
     var anchorYear = new Date(anchor + "T12:00:00").getFullYear();
+    var periodLabel = period.charAt(0).toUpperCase() + period.slice(1);
 
     return React.createElement("div", { className: "hm-header" },
       React.createElement("div", { className: "hm-title-block" },
@@ -719,7 +720,7 @@
           React.createElement(MetricSelect, { value: metric, onChange: setMetric }),
         ),
         React.createElement("div", { className: "hm-title-meta" },
-          String(anchorYear) + " · click any cell for details",
+          periodLabel + " view · click any cell for details",
         ),
       ),
 
@@ -752,32 +753,76 @@
     var period = props.period;
 
     var today = todayISO();
-    var anchorYear = new Date(anchor + "T12:00:00").getFullYear();
+    var anchorDate = new Date(anchor + "T12:00:00");
+    var anchorYear = anchorDate.getFullYear();
     var thisYear = new Date().getFullYear();
-    var isThisYear = anchor >= String(thisYear) + "-01-01" && anchor <= today;
+    var isCurrentPeriod = false;
 
-    function shiftYear(delta) {
-      var d = new Date(anchor + "T12:00:00");
-      d.setFullYear(d.getFullYear() + delta);
-      var nd = d.toISOString().slice(0, 10);
-      setAnchor(nd > today ? today : nd);
+    var navLabel = "";
+    var shiftFn = null;
+
+    if (period === "year") {
+      isCurrentPeriod = anchor >= String(thisYear) + "-01-01" && anchor <= today;
+      navLabel = String(anchorYear);
+      shiftFn = function (delta) {
+        var d = new Date(anchor + "T12:00:00");
+        d.setFullYear(d.getFullYear() + delta);
+        var nd = d.toISOString().slice(0, 10);
+        setAnchor(nd > today ? today : nd);
+      };
+    } else if (period === "month") {
+      var monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      navLabel = monthNames[anchorDate.getMonth()] + " " + anchorYear;
+      var thisMonth = new Date().getMonth();
+      var thisMonthYear = new Date().getFullYear();
+      isCurrentPeriod = anchorYear === thisMonthYear && anchorDate.getMonth() === thisMonth;
+      shiftFn = function (delta) {
+        var d = new Date(anchor + "T12:00:00");
+        d.setMonth(d.getMonth() + delta);
+        var nd = d.toISOString().slice(0, 10);
+        setAnchor(nd > today ? today : nd);
+      };
+    } else if (period === "week") {
+      var weekStart = new Date(anchor + "T12:00:00");
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+      var weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      var startStr = weekStart.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+      var endStr = weekEnd.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+      navLabel = startStr + " – " + endStr;
+      isCurrentPeriod = anchor >= today && anchor <= today;
+      shiftFn = function (delta) {
+        var d = new Date(anchor + "T12:00:00");
+        d.setDate(d.getDate() + delta * 7);
+        var nd = d.toISOString().slice(0, 10);
+        setAnchor(nd > today ? today : nd);
+      };
+    } else if (period === "day") {
+      navLabel = anchorDate.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+      isCurrentPeriod = anchor === today;
+      shiftFn = function (delta) {
+        var d = new Date(anchor + "T12:00:00");
+        d.setDate(d.getDate() + delta);
+        var nd = d.toISOString().slice(0, 10);
+        setAnchor(nd > today ? today : nd);
+      };
     }
 
     return React.createElement("div", { className: "hm-footer" },
       React.createElement("div", { className: "hm-year-nav" },
         React.createElement("button", {
           className: "hm-year-btn",
-          onClick: function () { shiftYear(-1); },
-          "aria-label": "Previous year",
+          onClick: function () { shiftFn(-1); },
+          "aria-label": "Previous " + period,
         }, "◀"),
-        React.createElement("span", { className: "hm-year-label" }, String(anchorYear)),
+        React.createElement("span", { className: "hm-year-label" }, navLabel),
         React.createElement("button", {
           className: "hm-year-btn",
-          onClick: function () { shiftYear(1); },
-          disabled: isThisYear,
-          "aria-label": "Next year",
+          onClick: function () { shiftFn(1); },
+          disabled: isCurrentPeriod,
+          "aria-label": "Next " + period,
         }, "▶"),
-        !isThisYear && React.createElement("button", {
+        !isCurrentPeriod && React.createElement("button", {
           className: "hm-year-back",
           onClick: function () { setAnchor(today); },
         }, "Today"),
